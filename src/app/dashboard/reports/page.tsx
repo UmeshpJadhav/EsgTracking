@@ -12,10 +12,10 @@ import autoTable from "jspdf-autotable";
 interface ReportData {
   id: string;
   financialYear: number;
-  carbonIntensity: number | null;
-  renewableRatio: number | null;
-  diversityRatio: number | null;
-  communitySpendRatio: number | null;
+  carbonIntensity: number | null;        // T CO2e / INR
+  renewableRatio: number | null;         // stored as fraction (0..1)
+  diversityRatio: number | null;         // stored as fraction (0..1)
+  communitySpendRatio: number | null;    // stored as fraction (0..1)
 }
 
 export default function ReportsPage() {
@@ -25,19 +25,18 @@ export default function ReportsPage() {
   const [isExporting, setExporting] = useState<"none" | "pdf" | "excel">("none");
 
   useEffect(() => {
-    const fetchData = async () => {
+    (async () => {
       try {
         const res = await fetch("/api/responses");
         if (!res.ok) throw new Error("Failed to load data");
         const json = await res.json();
         setData(Array.isArray(json.data) ? json.data : []);
-      } catch (error) {
-        console.error("Error:", error);
+      } catch (e) {
+        console.error(e);
       } finally {
         setLoading(false);
       }
-    };
-    fetchData();
+    })();
   }, []);
 
   const years = useMemo(() => {
@@ -54,13 +53,14 @@ export default function ReportsPage() {
     return result.sort((a, b) => a.financialYear - b.financialYear);
   }, [data, selectedYear]);
 
+  // Prepare chart rows with correct units (percent metrics multiplied by 100)
   const chartData = useMemo(() => {
     return filteredData.map(d => ({
       year: d.financialYear,
-      'Carbon': d.carbonIntensity ?? 0,
-      'Renewable': d.renewableRatio ? d.renewableRatio * 100 : 0,
-      'Diversity': d.diversityRatio ? d.diversityRatio * 100 : 0,
-      'Community': d.communitySpendRatio ? d.communitySpendRatio * 100 : 0,
+      Carbon: d.carbonIntensity ?? 0,                                      // raw value
+      Community: d.communitySpendRatio ? d.communitySpendRatio * 100 : 0,  // %
+      Diversity: d.diversityRatio ? d.diversityRatio * 100 : 0,            // %
+      Renewable: d.renewableRatio ? d.renewableRatio * 100 : 0,            // %
     }));
   }, [filteredData]);
 
@@ -68,28 +68,22 @@ export default function ReportsPage() {
     setExporting("pdf");
     try {
       const doc = new jsPDF();
-      
-      // Title
       doc.setFontSize(18);
       doc.text("ESG Performance Summary", 14, 22);
       doc.setFontSize(11);
       doc.setTextColor(100);
       doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
 
-      // Add chart as image (simplified for this example)
-      // In a real app, you might want to use html2canvas or similar
-      
-      // Data table
       const tableData = filteredData.map(d => [
         d.financialYear,
-        d.carbonIntensity?.toFixed(6) || 'N/A',
-        d.renewableRatio ? (d.renewableRatio * 100).toFixed(2) + '%' : 'N/A',
-        d.diversityRatio ? (d.diversityRatio * 100).toFixed(2) + '%' : 'N/A',
-        d.communitySpendRatio ? (d.communitySpendRatio * 100).toFixed(2) + '%' : 'N/A',
+        d.carbonIntensity?.toFixed(6) ?? "N/A",
+        d.renewableRatio ? (d.renewableRatio * 100).toFixed(2) + "%" : "N/A",
+        d.diversityRatio ? (d.diversityRatio * 100).toFixed(2) + "%" : "N/A",
+        d.communitySpendRatio ? (d.communitySpendRatio * 100).toFixed(2) + "%" : "N/A",
       ]);
 
       autoTable(doc, {
-        head: [['Year', 'Carbon Intensity', 'Renewable %', 'Diversity %', 'Community %']],
+        head: [["Year", "Carbon Intensity (T CO2e/INR)", "Renewable %", "Diversity %", "Community %"]],
         body: tableData,
         startY: 40,
         styles: { fontSize: 9 },
@@ -97,8 +91,8 @@ export default function ReportsPage() {
       });
 
       doc.save(`esg-summary-${new Date().toISOString().slice(0, 10)}.pdf`);
-    } catch (error) {
-      console.error("Error generating PDF:", error);
+    } catch (e) {
+      console.error(e);
     } finally {
       setExporting("none");
     }
@@ -107,12 +101,13 @@ export default function ReportsPage() {
   const exportToExcel = () => {
     setExporting("excel");
     try {
+      // Keep columns aligned with units (Carbon raw, others %)
       const worksheet = XLSX.utils.json_to_sheet(chartData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "ESG Summary");
       XLSX.writeFile(workbook, `esg-summary-${new Date().toISOString().slice(0, 10)}.xlsx`);
-    } catch (error) {
-      console.error("Error generating Excel:", error);
+    } catch (e) {
+      console.error(e);
     } finally {
       setExporting("none");
     }
@@ -126,7 +121,9 @@ export default function ReportsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-semibold">ESG Performance Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Summary of your organization&apos;s sustainability metrics</p>
+          <p className="text-sm text-muted-foreground">
+            Summary of your organization&apos;s sustainability metrics
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <select
@@ -137,14 +134,12 @@ export default function ReportsPage() {
           >
             <option value="all">All Years</option>
             {years.map(year => (
-              <option key={year} value={year}>
-                {year}
-              </option>
+              <option key={year} value={year}>{year}</option>
             ))}
           </select>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={exportToPDF}
             disabled={isExporting !== "none"}
             className="gap-2 flex-1 sm:flex-initial"
@@ -152,9 +147,9 @@ export default function ReportsPage() {
             <Download className="h-4 w-4" />
             {isExporting === "pdf" ? "Exporting..." : "PDF"}
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={exportToExcel}
             disabled={isExporting !== "none"}
             className="gap-2 flex-1 sm:flex-initial"
@@ -169,26 +164,96 @@ export default function ReportsPage() {
         <CardHeader>
           <CardTitle>ESG Metrics Overview</CardTitle>
         </CardHeader>
-        <CardContent className="h-[500px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="year" />
-              <YAxis yAxisId="left" />
-              <Tooltip 
-                formatter={(value, name) => 
-                  name === 'Carbon' 
-                    ? [Number(value).toFixed(6), name]
-                    : [`${Number(value).toFixed(1)}%`, name]
-                }
-              />
-              <Legend />
-              <Bar dataKey="Carbon" fill="#3b82f6" name="Carbon Intensity" />
-              <Bar dataKey="Renewable" fill="#10b981" name="Renewable %" />
-              <Bar dataKey="Diversity" fill="#f59e0b" name="Diversity %" />
-              <Bar dataKey="Community" fill="#ef4444" name="Community %" />
-            </BarChart>
-          </ResponsiveContainer>
+        <CardContent className="h-[500px] p-0">
+          <div className="h-full w-full p-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ 
+                  top: 20, 
+                  right: 60,  
+                  bottom: 20, 
+                  left: 60    
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                
+                {/* X-Axis */}
+                <XAxis 
+                  dataKey="year" 
+                  tickLine={false}
+                  axisLine={{ stroke: '#d1d5db' }}
+                  tick={{ fill: '#4b5563' }}
+                  tickMargin={10}
+                />
+                
+                {/* Left Y-Axis (Percentage) */}
+                <YAxis
+                  yAxisId="left"
+                  orientation="left"
+                  width={60}
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fill: '#4b5563' }}
+                  tickMargin={10}
+                  domain={[0, "auto"]}
+                  label={{
+                    value: "Percentage (%)",
+                    angle: -90,
+                    position: 'insideLeft',
+                    offset: -45,
+                    style: {
+                      textAnchor: 'middle',
+                      fontSize: '0.8rem',
+                      fontWeight: 500,
+                      fill: '#4b5563'
+                    }
+                  }}
+                  tickFormatter={(v) => `${v}%`}
+                />
+
+                {/* Right Y-Axis (Carbon Intensity) */}
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  width={80}
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fill: '#4b5563' }}
+                  tickMargin={10}
+                  domain={[0, "auto"]}
+                  label={{
+                    value: "T CO2e/INR",
+                    angle: 90,
+                    position: 'insideRight',
+                    offset: -50,
+                    style: {
+                      textAnchor: 'middle',
+                      fontSize: '0.8rem',
+                      fontWeight: 500,
+                      fill: '#4b5563'
+                    }
+                  }}
+                  tickFormatter={(v) => Number(v).toFixed(6)}
+                />
+
+                <Tooltip
+                  formatter={(value: any, name: string) =>
+                    name === "Carbon Intensity"
+                      ? [Number(value).toFixed(6), name]
+                      : [`${Number(value).toFixed(1)}%`, name]
+                  }
+                />
+                
+                <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                
+                <Bar yAxisId="right" dataKey="Carbon" name="Carbon Intensity" fill="#3b82f6" />
+                <Bar yAxisId="left" dataKey="Community" name="Community %" fill="#ef4444" />
+                <Bar yAxisId="left" dataKey="Diversity" name="Diversity %" fill="#f59e0b" />
+                <Bar yAxisId="left" dataKey="Renewable" name="Renewable %" fill="#10b981" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
     </div>

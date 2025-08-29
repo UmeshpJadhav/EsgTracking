@@ -40,7 +40,7 @@ export function DashboardHeader() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 ">
           <Button 
             variant="outline" 
             size="sm"
