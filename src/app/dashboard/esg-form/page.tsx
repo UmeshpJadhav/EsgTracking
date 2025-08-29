@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +29,7 @@ interface FormData {
 }
 
 export default function ESGFormPage() {
+  const router = useRouter();
   const currentYear = new Date().getFullYear();
   const [formData, setFormData] = useState<FormData>({
     financialYear: currentYear,
@@ -157,6 +159,11 @@ export default function ESGFormPage() {
       }
 
       setSuccess("ESG response saved successfully!");
+      
+      // Navigate to dashboard reports page after a short delay
+      setTimeout(() => {
+        router.push('/dashboard/reports');
+      }, 1500);
       
       // Reset form after successful submission
       setFormData({

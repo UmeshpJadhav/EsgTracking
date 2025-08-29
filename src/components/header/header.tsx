@@ -8,9 +8,8 @@ import { Icons } from "@/components/icons"
 import { signOut } from "next-auth/react"
 
 const navItems = [
-  { name: "Dashboard", href: "/dashboard" },
-  { name: "ESG Form", href: "/dashboard/esg-form" },
-  { name: "Reports", href: "/dashboard/reports" }
+  { name: "Home", href: "/dashboard" },
+  { name: "Dashboard", href: "/dashboard/reports" }
 ]
 
 export function DashboardHeader() {
@@ -18,23 +17,22 @@ export function DashboardHeader() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        <div className="flex gap-6 md:gap-10">
+      <div className="container flex h-20 items-center justify-between px-4 sm:px-6">
+        <div className="flex items-center gap-10 md:gap-12">
           <Link href="/dashboard" className="flex items-center space-x-2">
-            <Icons.logo className="h-6 w-6" />
-            <span className="font-bold">ESG Tracker</span>
+            <span className="text-xl font-bold tracking-tight">ESG Tracker</span>
           </Link>
           
-          <nav className="hidden gap-6 md:flex">
+          <nav className="hidden gap-10 md:flex">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center text-sm font-medium ${
+                className={`text-base font-medium transition-colors ${
                   pathname === item.href 
                     ? "text-foreground" 
                     : "text-muted-foreground hover:text-foreground"
-                } transition-colors`}
+                }`}
               >
                 {item.name}
               </Link>

@@ -49,8 +49,9 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-center">Create your account</CardTitle>
+        <CardHeader className="text-center space-y-2">
+          <CardTitle>Create Account</CardTitle>
+          <p className="text-sm text-muted-foreground">Sign up to start tracking your ESG metrics</p>
         </CardHeader>
         <CardContent>
           {error && (

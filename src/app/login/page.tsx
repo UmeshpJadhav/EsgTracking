@@ -54,14 +54,15 @@ function LoginForm() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle>Sign in to your account</CardTitle>
+        <CardHeader className="text-center space-y-2">
+          <CardTitle>Sign In</CardTitle>
+          <p className="text-sm text-muted-foreground">Enter your credentials to access your ESG dashboard</p>
         </CardHeader>
         <CardContent>
           {error && (
-            <Alert variant={error.includes("success") ? "default" : "destructive"} className="mb-4">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+            <div className={`p-3 mb-4 text-sm ${error.includes("success") ? 'bg-green-50 border-l-4 border-green-400 text-green-700' : 'bg-red-50 border-l-4 border-red-400 text-red-700'}`}>
+              {error}
+            </div>
           )}
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
