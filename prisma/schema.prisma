@@ -1,0 +1,100 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String       @id @default(cuid())
+  name          String       @db.VarChar(255)
+  email         String       @unique @db.VarChar(255)
+  passwordHash  String       @db.VarChar(255)
+  emailVerified DateTime?
+  image         String?      @db.VarChar(512)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  responses     ESGResponse[]
+  isActive      Boolean      @default(true)
+
+  @@map("users")
+}
+
+model ESGResponse {
+  id                     String   @id @default(cuid())
+  userId                 String
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Financial Year (e.g., 2023 for FY 2022-23)
+  financialYear          Int
+  
+  // Environmental Metrics
+  totalElectricity       Float?   @default(0)  // kWh
+  renewableElectricity   Float?   @default(0)  // kWh
+  totalFuel              Float?   @default(0)  // liters
+  carbonEmissions        Float?   @default(0)  // T CO2e
+  
+  // Social Metrics
+  totalEmployees         Int?     @default(0)
+  femaleEmployees        Int?     @default(0)
+  trainingHours          Float?   @default(0)  // hours per employee per year
+  communityInvestment    Float?   @default(0)  // INR
+  
+  // Governance Metrics
+  independentBoard       Float?   @default(0)  // %
+  dataPrivacyPolicy      Boolean? @default(false)
+  totalRevenue           Float?   @default(0)  // INR
+  
+  // Auto-calculated Metrics
+  carbonIntensity        Float?   @default(0)  // T CO2e / INR
+  renewableRatio         Float?   @default(0)  // %
+  diversityRatio         Float?   @default(0)  // %
+  communitySpendRatio    Float?   @default(0)  // %
+  
+  // Metadata
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  isDeleted              Boolean  @default(false)
+
+  @@unique([userId, financialYear], name: "user_financial_year")
+  @@index([financialYear])
+  @@index([userId])
+  @@map("esg_responses")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique @db.VarChar(512)
+  expires    DateTime
+  createdAt  DateTime @default(now())
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String   @db.VarChar(50)
+  entityType  String   @db.VarChar(50)
+  entityId    String   @db.VarChar(100)
+  userId      String   @db.VarChar(100)
+  oldValue    Json?
+  newValue    Json?
+  ipAddress   String?  @db.VarChar(45)
+  userAgent   String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
