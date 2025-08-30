@@ -6,8 +6,14 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
+import { Metadata } from "next";
 
-export default async function DashboardPage() {
+export const metadata: Metadata = {
+  title: "Home - ESG Tracker",
+  description: "Welcome to your ESG reporting dashboard",
+};
+
+export default async function HomePage() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -68,6 +74,9 @@ export default async function DashboardPage() {
                             Carbon Intensity
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Community Spend Ratio
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Last Updated
                           </th>
                           <th className="relative px-6 py-3">
@@ -82,10 +91,13 @@ export default async function DashboardPage() {
                               {response.financialYear}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {response.carbonIntensity?.toFixed(6)} T CO2e/INR
+                              {response.carbonIntensity?.toFixed(6) ?? 'N/A'} T CO2e/INR
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {format(new Date(response.updatedAt), 'MMM d, yyyy')}
+                              {response.communitySpendRatio ? (response.communitySpendRatio * 100).toFixed(4) + '%' : 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {format(new Date(response.updatedAt), 'MMM d, yyyy hh:mm a')}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                               <Link 
@@ -110,7 +122,7 @@ export default async function DashboardPage() {
                 </div>
               ) : (
                 <div className="text-center py-12 bg-gray-50 rounded-lg">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No reports yet</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Welcome to your ESG Home!</h3>
                   <p className="text-sm text-gray-500 mb-4">Get started by creating your first ESG report</p>
                   <Button asChild>
                     <Link href="/dashboard/esg-form">Create Report</Link>

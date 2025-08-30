@@ -45,13 +45,15 @@ export async function POST(req: NextRequest) {
 
   const calculate = (numerator?: number | null, denominator?: number | null) => {
     if (!numerator || !denominator || denominator === 0) return 0;
-    return Number(((numerator / denominator) * 100).toFixed(2));
+    // Return as fraction (0-1) instead of percentage for consistency with frontend
+    return Number((numerator / denominator).toFixed(6));
   };
 
   const carbonIntensity = !totalRevenue || totalRevenue === 0
     ? 0
     : Number(((carbonEmissions || 0) / totalRevenue).toFixed(6));
 
+  // Store as fractions (0-1) for consistency with frontend expectations
   const renewableRatio = calculate(renewableElectricity, totalElectricity);
   const diversityRatio = calculate(femaleEmployees, totalEmployees);
   const communitySpendRatio = calculate(communityInvestment, totalRevenue);

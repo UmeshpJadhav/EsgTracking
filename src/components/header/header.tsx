@@ -1,4 +1,4 @@
-// src/components/dashboard/header.tsx
+// src/components/header/header.tsx
 "use client"
 
 import Link from "next/link"
@@ -9,10 +9,10 @@ import { signOut } from "next-auth/react"
 
 const navItems = [
   { name: "Home", href: "/dashboard" },
-  { name: "Dashboard", href: "/dashboard/reports" }
+  { name: "Reports", href: "/dashboard/reports" }
 ]
 
-export function DashboardHeader() {
+export function HomeHeader() {
   const pathname = usePathname()
 
   return (

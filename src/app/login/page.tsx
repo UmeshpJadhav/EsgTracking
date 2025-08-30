@@ -56,7 +56,7 @@ function LoginForm() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
           <CardTitle>Sign In</CardTitle>
-          <p className="text-sm text-muted-foreground">Enter your credentials to access your ESG dashboard</p>
+          <p className="text-sm text-muted-foreground">Enter your credentials to access your ESG home</p>
         </CardHeader>
         <CardContent>
           {error && (

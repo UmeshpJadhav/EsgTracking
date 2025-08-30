@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,9 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 
-const RequiredField = () => (
-  <span className="text-red-500 ml-1">*</span>
-);
+const RequiredField = () => <span className="text-red-500 ml-1">*</span>;
 
 interface FormData {
   financialYear: number;
@@ -30,7 +28,9 @@ interface FormData {
 
 export default function ESGFormPage() {
   const router = useRouter();
-  const currentYear = new Date().getFullYear();
+  const searchParams = useSearchParams();
+  const yearParam = searchParams.get('year');
+  const currentYear = yearParam ? parseInt(yearParam, 10) : new Date().getFullYear();
   const [formData, setFormData] = useState<FormData>({
     financialYear: currentYear,
     totalElectricity: "",
@@ -50,15 +50,15 @@ export default function ESGFormPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Auto-calculated metrics
+  // Auto-calculated metrics (stored as fractions 0..1; UI renders as %)
   const [calculations, setCalculations] = useState({
-    carbonIntensity: 0,
-    renewableRatio: 0,
-    diversityRatio: 0,
-    communitySpendRatio: 0,
+    carbonIntensity: 0,        // T CO2e / INR
+    renewableRatio: 0,         // fraction 0..1
+    diversityRatio: 0,         // fraction 0..1
+    communitySpendRatio: 0,    // fraction 0..1
   });
 
-  // Calculate metrics in real-time
+  // Calculate metrics in real-time (fractions)
   useEffect(() => {
     const carbonEmissions = parseFloat(formData.carbonEmissions) || 0;
     const totalRevenue = parseFloat(formData.totalRevenue) || 0;
@@ -70,14 +70,14 @@ export default function ESGFormPage() {
 
     setCalculations({
       carbonIntensity: totalRevenue > 0 ? carbonEmissions / totalRevenue : 0,
-      renewableRatio: totalElectricity > 0 ? (renewableElectricity / totalElectricity) * 100 : 0,
-      diversityRatio: totalEmployees > 0 ? (femaleEmployees / totalEmployees) * 100 : 0,
-      communitySpendRatio: totalRevenue > 0 ? (communityInvestment / totalRevenue) * 100 : 0,
+      renewableRatio: totalElectricity > 0 ? (renewableElectricity / totalElectricity) : 0,
+      diversityRatio: totalEmployees > 0 ? (femaleEmployees / totalEmployees) : 0,
+      communitySpendRatio: totalRevenue > 0 ? (communityInvestment / totalRevenue) : 0,
     });
   }, [formData]);
 
   const handleInputChange = (field: keyof FormData, value: string | number | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value as any }));
     setError("");
     setSuccess("");
   };
@@ -91,40 +91,43 @@ export default function ESGFormPage() {
     try {
       // Required fields validation
       const requiredFields = [
-        { field: 'totalElectricity', label: 'Total Electricity Consumption' },
-        { field: 'renewableElectricity', label: 'Renewable Electricity Consumption' },
-        { field: 'totalFuel', label: 'Total Fuel Consumption' },
-        { field: 'carbonEmissions', label: 'Carbon Emissions' },
-        { field: 'totalEmployees', label: 'Total Number of Employees' },
-        { field: 'femaleEmployees', label: 'Number of Female Employees' },
-        { field: 'trainingHours', label: 'Average Training Hours' },
-        { field: 'communityInvestment', label: 'Community Investment' },
-        { field: 'independentBoard', label: '% of Independent Board Members' },
-        { field: 'totalRevenue', label: 'Total Revenue' }
+        { field: "totalElectricity", label: "Total Electricity Consumption" },
+        { field: "renewableElectricity", label: "Renewable Electricity Consumption" },
+        { field: "totalFuel", label: "Total Fuel Consumption" },
+        { field: "carbonEmissions", label: "Carbon Emissions" },
+        { field: "totalEmployees", label: "Total Number of Employees" },
+        { field: "femaleEmployees", label: "Number of Female Employees" },
+        { field: "trainingHours", label: "Average Training Hours" },
+        { field: "communityInvestment", label: "Community Investment" },
+        { field: "independentBoard", label: "% of Independent Board Members" },
+        { field: "totalRevenue", label: "Total Revenue" },
       ];
-
-      const emptyFields = requiredFields.filter(
-        ({ field }) => !formData[field as keyof FormData]
-      );
-
+      const emptyFields = requiredFields.filter(({ field }) => !formData[field as keyof FormData]);
       if (emptyFields.length > 0) {
-        const fieldLabels = emptyFields.map(f => `"${f.label}"`).join(', ');
-        const message = emptyFields.length === 1 
-          ? `Please fill in the required field: ${fieldLabels}`
-          : `Please fill in all required fields: ${fieldLabels}`;
-        
+        const fieldLabels = emptyFields.map((f) => `"${f.label}"`).join(", ");
+        const message =
+          emptyFields.length === 1
+            ? `Please fill in the required field: ${fieldLabels}`
+            : `Please fill in all required fields: ${fieldLabels}`;
         throw new Error(message);
       }
 
-      // Numeric validation
+      // Additional validation
       if (parseFloat(formData.renewableElectricity) > parseFloat(formData.totalElectricity)) {
         throw new Error("Renewable electricity cannot exceed total electricity consumption");
       }
-
       if (parseInt(formData.femaleEmployees) > parseInt(formData.totalEmployees)) {
         throw new Error("Female employees cannot exceed total employees");
       }
+      if (formData.dataPrivacyPolicy === null) {
+        throw new Error("Please select whether the company has a data privacy policy");
+      }
+      const independentBoardVal = parseFloat(formData.independentBoard);
+      if (independentBoardVal < 0 || independentBoardVal > 100) {
+        throw new Error("% of independent board members must be between 0 and 100");
+      }
 
+      // Prepare payload (ratios as fractions 0..1)
       const payload = {
         financialYear: formData.financialYear,
         totalElectricity: formData.totalElectricity ? parseFloat(formData.totalElectricity) : 0,
@@ -135,10 +138,10 @@ export default function ESGFormPage() {
         femaleEmployees: formData.femaleEmployees ? parseInt(formData.femaleEmployees) : 0,
         trainingHours: formData.trainingHours ? parseFloat(formData.trainingHours) : 0,
         communityInvestment: formData.communityInvestment ? parseFloat(formData.communityInvestment) : 0,
-        independentBoard: formData.independentBoard ? parseFloat(formData.independentBoard) : 0,
+        independentBoard: independentBoardVal,
         dataPrivacyPolicy: formData.dataPrivacyPolicy,
         totalRevenue: formData.totalRevenue ? parseFloat(formData.totalRevenue) : 0,
-        // Auto-calculated fields
+        // Auto-calculated (fractions + intensity)
         carbonIntensity: calculations.carbonIntensity,
         renewableRatio: calculations.renewableRatio,
         diversityRatio: calculations.diversityRatio,
@@ -147,25 +150,18 @@ export default function ESGFormPage() {
 
       const response = await fetch("/api/responses", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
       if (!response.ok) {
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         throw new Error(data.error || "Failed to save response");
       }
 
       setSuccess("ESG response saved successfully!");
-      
-      // Navigate to dashboard reports page after a short delay
-      setTimeout(() => {
-        router.push('/dashboard/reports');
-      }, 1500);
-      
-      // Reset form after successful submission
+      setTimeout(() => router.push("/dashboard/reports"), 1500);
+
+      // Reset form
       setFormData({
         financialYear: currentYear,
         totalElectricity: "",
@@ -203,14 +199,13 @@ export default function ESGFormPage() {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          
           {success && (
             <Alert className="border-green-200 bg-green-50 text-green-800">
               <AlertDescription>{success}</AlertDescription>
             </Alert>
           )}
 
-          {/* Financial Year Selection */}
+          {/* Financial Year */}
           <Card className="shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="text-xl">Reporting Period</CardTitle>
@@ -238,16 +233,15 @@ export default function ESGFormPage() {
             </CardContent>
           </Card>
 
-          {/* Environmental Metrics */}
+          {/* Environmental */}
           <Card className="shadow-sm">
             <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-xl">
-                Environmental Metrics
-              </CardTitle>
+              <CardTitle className="flex items-center gap-2 text-xl">Environmental Metrics</CardTitle>
               <CardDescription>Track your organization&apos;s environmental impact</CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Total Electricity */}
                 <div className="space-y-2">
                   <Label htmlFor="totalElectricity" className="text-sm font-medium flex items-center">
                     Total Electricity Consumption <RequiredField />
@@ -261,7 +255,7 @@ export default function ESGFormPage() {
                       value={formData.totalElectricity}
                       onChange={(e) => handleInputChange("totalElectricity", e.target.value)}
                       placeholder="0.00"
-                      className={`pr-12 ${!formData.totalElectricity && error ? 'border-red-500' : ''}`}
+                      className={`pr-12 ${!formData.totalElectricity && error ? "border-red-500" : ""}`}
                       required
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -273,6 +267,7 @@ export default function ESGFormPage() {
                   )}
                 </div>
 
+                {/* Renewable Electricity */}
                 <div className="space-y-2">
                   <Label htmlFor="renewableElectricity" className="text-sm font-medium flex items-center">
                     Renewable Electricity Consumption <RequiredField />
@@ -286,7 +281,7 @@ export default function ESGFormPage() {
                       value={formData.renewableElectricity}
                       onChange={(e) => handleInputChange("renewableElectricity", e.target.value)}
                       placeholder="0.00"
-                      className={`pr-12 ${!formData.renewableElectricity && error ? 'border-red-500' : ''}`}
+                      className={`pr-12 ${!formData.renewableElectricity && error ? "border-red-500" : ""}`}
                       required
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -298,6 +293,7 @@ export default function ESGFormPage() {
                   )}
                 </div>
 
+                {/* Total Fuel */}
                 <div className="space-y-2">
                   <Label htmlFor="totalFuel" className="text-sm font-medium flex items-center">
                     Total Fuel Consumption <RequiredField />
@@ -311,7 +307,7 @@ export default function ESGFormPage() {
                       value={formData.totalFuel}
                       onChange={(e) => handleInputChange("totalFuel", e.target.value)}
                       placeholder="0.00"
-                      className={`pr-16 ${!formData.totalFuel && error ? 'border-red-500' : ''}`}
+                      className={`pr-16 ${!formData.totalFuel && error ? "border-red-500" : ""}`}
                       required
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -323,6 +319,7 @@ export default function ESGFormPage() {
                   )}
                 </div>
 
+                {/* Carbon Emissions */}
                 <div className="space-y-2">
                   <Label htmlFor="carbonEmissions" className="text-sm font-medium flex items-center">
                     Carbon Emissions <RequiredField />
@@ -336,11 +333,13 @@ export default function ESGFormPage() {
                       value={formData.carbonEmissions}
                       onChange={(e) => handleInputChange("carbonEmissions", e.target.value)}
                       placeholder="0.00"
-                      className={`pr-20 ${!formData.carbonEmissions && error ? 'border-red-500' : ''}`}
+                      className={`pr-20 ${!formData.carbonEmissions && error ? "border-red-500" : ""}`}
                       required
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded whitespace-nowrap">T CO2e</span>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded whitespace-nowrap">
+                        T CO2e
+                      </span>
                     </div>
                   </div>
                   {!formData.carbonEmissions && error && (
@@ -351,13 +350,13 @@ export default function ESGFormPage() {
             </CardContent>
           </Card>
 
-          {/* Social Metrics */}
+          {/* Social */}
           <Card className="shadow-sm">
             <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-xl">
-                Social Metrics
-              </CardTitle>
-              <CardDescription>Measure your organization&apos;s social impact and workforce diversity</CardDescription>
+              <CardTitle className="flex items-center gap-2 text-xl">Social Metrics</CardTitle>
+              <CardDescription>
+                Measure your organization&apos;s social impact and workforce diversity
+              </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -372,7 +371,7 @@ export default function ESGFormPage() {
                     value={formData.totalEmployees}
                     onChange={(e) => handleInputChange("totalEmployees", e.target.value)}
                     placeholder="0"
-                    className={` ${!formData.totalEmployees && error ? 'border-red-500' : ''}`}
+                    className={`${!formData.totalEmployees && error ? "border-red-500" : ""}`}
                     required
                   />
                   {!formData.totalEmployees && error && (
@@ -391,7 +390,7 @@ export default function ESGFormPage() {
                     value={formData.femaleEmployees}
                     onChange={(e) => handleInputChange("femaleEmployees", e.target.value)}
                     placeholder="0"
-                    className={` ${!formData.femaleEmployees && error ? 'border-red-500' : ''}`}
+                    className={`${!formData.femaleEmployees && error ? "border-red-500" : ""}`}
                     required
                   />
                   {!formData.femaleEmployees && error && (
@@ -411,7 +410,7 @@ export default function ESGFormPage() {
                     value={formData.trainingHours}
                     onChange={(e) => handleInputChange("trainingHours", e.target.value)}
                     placeholder="0.0"
-                    className={` ${!formData.trainingHours && error ? 'border-red-500' : ''}`}
+                    className={`${!formData.trainingHours && error ? "border-red-500" : ""}`}
                     required
                   />
                   {!formData.trainingHours && error && (
@@ -432,7 +431,7 @@ export default function ESGFormPage() {
                       value={formData.communityInvestment}
                       onChange={(e) => handleInputChange("communityInvestment", e.target.value)}
                       placeholder="0.00"
-                      className={`pr-12 ${!formData.communityInvestment && error ? 'border-red-500' : ''}`}
+                      className={`pr-12 ${!formData.communityInvestment && error ? "border-red-500" : ""}`}
                       required
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -447,12 +446,10 @@ export default function ESGFormPage() {
             </CardContent>
           </Card>
 
-          {/* Governance Metrics */}
+          {/* Governance */}
           <Card className="shadow-sm">
             <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-xl">
-                Governance Metrics
-              </CardTitle>
+              <CardTitle className="flex items-center gap-2 text-xl">Governance Metrics</CardTitle>
               <CardDescription>Assess your organization&apos;s governance practices and transparency</CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
@@ -471,7 +468,7 @@ export default function ESGFormPage() {
                       value={formData.independentBoard}
                       onChange={(e) => handleInputChange("independentBoard", e.target.value)}
                       placeholder="0.0"
-                      className={`pr-10 ${!formData.independentBoard && error ? 'border-red-500' : ''}`}
+                      className={`pr-10 ${!formData.independentBoard && error ? "border-red-500" : ""}`}
                       required
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -484,7 +481,9 @@ export default function ESGFormPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="dataPrivacyPolicy" className="text-sm font-medium">Does the company have a data privacy policy?</Label>
+                  <Label htmlFor="dataPrivacyPolicy" className="text-sm font-medium">
+                    Does the company have a data privacy policy?
+                  </Label>
                   <Select
                     value={formData.dataPrivacyPolicy === null ? "" : formData.dataPrivacyPolicy.toString()}
                     onValueChange={(value) => handleInputChange("dataPrivacyPolicy", value === "true")}
@@ -512,7 +511,7 @@ export default function ESGFormPage() {
                       value={formData.totalRevenue}
                       onChange={(e) => handleInputChange("totalRevenue", e.target.value)}
                       placeholder="0.00"
-                      className={`pr-12 ${!formData.totalRevenue && error ? 'border-red-500' : ''}`}
+                      className={`pr-12 ${!formData.totalRevenue && error ? "border-red-500" : ""}`}
                       required
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -527,14 +526,18 @@ export default function ESGFormPage() {
             </CardContent>
           </Card>
 
-          {/* Auto-Calculated Metrics */}
+          {/* Auto-Calculated Metrics (render as % but store fractions) */}
           <Card className="shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-xl">
                 Auto-Calculated Metrics
-                <Badge variant="secondary" className="bg-amber-100 text-amber-700">Real-time calculation</Badge>
+                <Badge variant="secondary" className="bg-amber-100 text-amber-700">
+                  Real-time calculation
+                </Badge>
               </CardTitle>
-              <CardDescription>These metrics are automatically calculated based on your inputs</CardDescription>
+              <CardDescription>
+                These metrics are automatically calculated based on your inputs
+              </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -552,7 +555,7 @@ export default function ESGFormPage() {
                   <Label className="text-sm font-medium">Renewable Electricity Ratio</Label>
                   <div className="relative">
                     <div className="flex items-center justify-between rounded-md border border-input bg-gray-100 px-3 py-2 text-sm">
-                      <span>{calculations.renewableRatio.toFixed(2)}</span>
+                      <span>{(calculations.renewableRatio * 100).toFixed(2)}</span>
                       <span className="text-xs text-gray-500">%</span>
                     </div>
                   </div>
@@ -562,7 +565,7 @@ export default function ESGFormPage() {
                   <Label className="text-sm font-medium">Diversity Ratio</Label>
                   <div className="relative">
                     <div className="flex items-center justify-between rounded-md border border-input bg-gray-100 px-3 py-2 text-sm">
-                      <span>{calculations.diversityRatio.toFixed(2)}</span>
+                      <span>{(calculations.diversityRatio * 100).toFixed(2)}</span>
                       <span className="text-xs text-gray-500">%</span>
                     </div>
                   </div>
@@ -572,7 +575,7 @@ export default function ESGFormPage() {
                   <Label className="text-sm font-medium">Community Spend Ratio</Label>
                   <div className="relative">
                     <div className="flex items-center justify-between rounded-md border border-input bg-gray-100 px-3 py-2 text-sm">
-                      <span>{calculations.communitySpendRatio.toFixed(4)}</span>
+                      <span>{(calculations.communitySpendRatio * 100).toFixed(4)}</span>
                       <span className="text-xs text-gray-500">%</span>
                     </div>
                   </div>
