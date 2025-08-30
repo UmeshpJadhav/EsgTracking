@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,18 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 
 const RequiredField = () => <span className="text-red-500 ml-1">*</span>;
+
+// Prevent scroll/arrow changing number inputs
+const preventWheelChange = (e: React.WheelEvent<HTMLInputElement>) => {
+  e.currentTarget.blur();
+};
+const preventArrowIncrement = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  if (e.key === "ArrowUp" || e.key === "ArrowDown") e.preventDefault();
+};
+const numberGuardProps = {
+  onWheel: preventWheelChange,
+  onKeyDown: preventArrowIncrement,
+};
 
 interface FormData {
   financialYear: number;
@@ -29,8 +42,9 @@ interface FormData {
 export default function ESGFormPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const yearParam = searchParams.get('year');
+  const yearParam = searchParams.get("year");
   const currentYear = yearParam ? parseInt(yearParam, 10) : new Date().getFullYear();
+
   const [formData, setFormData] = useState<FormData>({
     financialYear: currentYear,
     totalElectricity: "",
@@ -50,15 +64,15 @@ export default function ESGFormPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Auto-calculated metrics (stored as fractions 0..1; UI renders as %)
+  // Auto-calculated metrics (store fractions 0..1; UI shows %)
   const [calculations, setCalculations] = useState({
-    carbonIntensity: 0,        // T CO2e / INR
-    renewableRatio: 0,         // fraction 0..1
-    diversityRatio: 0,         // fraction 0..1
-    communitySpendRatio: 0,    // fraction 0..1
+    carbonIntensity: 0, // T CO2e / INR
+    renewableRatio: 0, // fraction 0..1
+    diversityRatio: 0, // fraction 0..1
+    communitySpendRatio: 0, // fraction 0..1
   });
 
-  // Calculate metrics in real-time (fractions)
+  // Recalculate on any input change
   useEffect(() => {
     const carbonEmissions = parseFloat(formData.carbonEmissions) || 0;
     const totalRevenue = parseFloat(formData.totalRevenue) || 0;
@@ -70,9 +84,9 @@ export default function ESGFormPage() {
 
     setCalculations({
       carbonIntensity: totalRevenue > 0 ? carbonEmissions / totalRevenue : 0,
-      renewableRatio: totalElectricity > 0 ? (renewableElectricity / totalElectricity) : 0,
-      diversityRatio: totalEmployees > 0 ? (femaleEmployees / totalEmployees) : 0,
-      communitySpendRatio: totalRevenue > 0 ? (communityInvestment / totalRevenue) : 0,
+      renewableRatio: totalElectricity > 0 ? renewableElectricity / totalElectricity : 0,
+      diversityRatio: totalEmployees > 0 ? femaleEmployees / totalEmployees : 0,
+      communitySpendRatio: totalRevenue > 0 ? communityInvestment / totalRevenue : 0,
     });
   }, [formData]);
 
@@ -101,7 +115,8 @@ export default function ESGFormPage() {
         { field: "communityInvestment", label: "Community Investment" },
         { field: "independentBoard", label: "% of Independent Board Members" },
         { field: "totalRevenue", label: "Total Revenue" },
-      ];
+      ] as const;
+
       const emptyFields = requiredFields.filter(({ field }) => !formData[field as keyof FormData]);
       if (emptyFields.length > 0) {
         const fieldLabels = emptyFields.map((f) => `"${f.label}"`).join(", ");
@@ -112,7 +127,7 @@ export default function ESGFormPage() {
         throw new Error(message);
       }
 
-      // Additional validation
+      // Numeric sanity checks
       if (parseFloat(formData.renewableElectricity) > parseFloat(formData.totalElectricity)) {
         throw new Error("Renewable electricity cannot exceed total electricity consumption");
       }
@@ -127,7 +142,7 @@ export default function ESGFormPage() {
         throw new Error("% of independent board members must be between 0 and 100");
       }
 
-      // Prepare payload (ratios as fractions 0..1)
+      // Build payload (ratios stay as fractions 0..1)
       const payload = {
         financialYear: formData.financialYear,
         totalElectricity: formData.totalElectricity ? parseFloat(formData.totalElectricity) : 0,
@@ -141,7 +156,6 @@ export default function ESGFormPage() {
         independentBoard: independentBoardVal,
         dataPrivacyPolicy: formData.dataPrivacyPolicy,
         totalRevenue: formData.totalRevenue ? parseFloat(formData.totalRevenue) : 0,
-        // Auto-calculated (fractions + intensity)
         carbonIntensity: calculations.carbonIntensity,
         renewableRatio: calculations.renewableRatio,
         diversityRatio: calculations.diversityRatio,
@@ -161,7 +175,7 @@ export default function ESGFormPage() {
       setSuccess("ESG response saved successfully!");
       setTimeout(() => router.push("/dashboard/reports"), 1500);
 
-      // Reset form
+      // Reset after save
       setFormData({
         financialYear: currentYear,
         totalElectricity: "",
@@ -205,7 +219,7 @@ export default function ESGFormPage() {
             </Alert>
           )}
 
-          {/* Financial Year */}
+          {/* Reporting Period */}
           <Card className="shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="text-xl">Reporting Period</CardTitle>
@@ -213,7 +227,9 @@ export default function ESGFormPage() {
             </CardHeader>
             <CardContent className="pt-0">
               <div className="max-w-xs">
-                <Label htmlFor="financialYear" className="text-sm font-medium">Financial Year</Label>
+                <Label htmlFor="financialYear" className="text-sm font-medium">
+                  Financial Year
+                </Label>
                 <Select
                   value={formData.financialYear.toString()}
                   onValueChange={(value) => handleInputChange("financialYear", parseInt(value))}
@@ -233,7 +249,7 @@ export default function ESGFormPage() {
             </CardContent>
           </Card>
 
-          {/* Environmental */}
+          {/* Environmental Metrics */}
           <Card className="shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-xl">Environmental Metrics</CardTitle>
@@ -250,6 +266,7 @@ export default function ESGFormPage() {
                     <Input
                       id="totalElectricity"
                       type="number"
+                      inputMode="decimal"
                       step="0.01"
                       min="0"
                       value={formData.totalElectricity}
@@ -257,14 +274,12 @@ export default function ESGFormPage() {
                       placeholder="0.00"
                       className={`pr-12 ${!formData.totalElectricity && error ? "border-red-500" : ""}`}
                       required
+                      {...numberGuardProps}
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                       <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">kWh</span>
                     </div>
                   </div>
-                  {!formData.totalElectricity && error && (
-                    <p className="text-red-500 text-xs mt-1">This field is required</p>
-                  )}
                 </div>
 
                 {/* Renewable Electricity */}
@@ -276,6 +291,7 @@ export default function ESGFormPage() {
                     <Input
                       id="renewableElectricity"
                       type="number"
+                      inputMode="decimal"
                       step="0.01"
                       min="0"
                       value={formData.renewableElectricity}
@@ -283,14 +299,12 @@ export default function ESGFormPage() {
                       placeholder="0.00"
                       className={`pr-12 ${!formData.renewableElectricity && error ? "border-red-500" : ""}`}
                       required
+                      {...numberGuardProps}
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                       <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">kWh</span>
                     </div>
                   </div>
-                  {!formData.renewableElectricity && error && (
-                    <p className="text-red-500 text-xs mt-1">This field is required</p>
-                  )}
                 </div>
 
                 {/* Total Fuel */}
@@ -302,6 +316,7 @@ export default function ESGFormPage() {
                     <Input
                       id="totalFuel"
                       type="number"
+                      inputMode="decimal"
                       step="0.01"
                       min="0"
                       value={formData.totalFuel}
@@ -309,14 +324,12 @@ export default function ESGFormPage() {
                       placeholder="0.00"
                       className={`pr-16 ${!formData.totalFuel && error ? "border-red-500" : ""}`}
                       required
+                      {...numberGuardProps}
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                       <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">liters</span>
                     </div>
                   </div>
-                  {!formData.totalFuel && error && (
-                    <p className="text-red-500 text-xs mt-1">This field is required</p>
-                  )}
                 </div>
 
                 {/* Carbon Emissions */}
@@ -328,6 +341,7 @@ export default function ESGFormPage() {
                     <Input
                       id="carbonEmissions"
                       type="number"
+                      inputMode="decimal"
                       step="0.01"
                       min="0"
                       value={formData.carbonEmissions}
@@ -335,6 +349,7 @@ export default function ESGFormPage() {
                       placeholder="0.00"
                       className={`pr-20 ${!formData.carbonEmissions && error ? "border-red-500" : ""}`}
                       required
+                      {...numberGuardProps}
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                       <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded whitespace-nowrap">
@@ -342,21 +357,16 @@ export default function ESGFormPage() {
                       </span>
                     </div>
                   </div>
-                  {!formData.carbonEmissions && error && (
-                    <p className="text-red-500 text-xs mt-1">This field is required</p>
-                  )}
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Social */}
+          {/* Social Metrics */}
           <Card className="shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-xl">Social Metrics</CardTitle>
-              <CardDescription>
-                Measure your organization&apos;s social impact and workforce diversity
-              </CardDescription>
+              <CardDescription>Measure your organization&apos;s social impact and workforce diversity</CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -367,16 +377,15 @@ export default function ESGFormPage() {
                   <Input
                     id="totalEmployees"
                     type="number"
+                    inputMode="numeric"
                     min="0"
                     value={formData.totalEmployees}
                     onChange={(e) => handleInputChange("totalEmployees", e.target.value)}
                     placeholder="0"
                     className={`${!formData.totalEmployees && error ? "border-red-500" : ""}`}
                     required
+                    {...numberGuardProps}
                   />
-                  {!formData.totalEmployees && error && (
-                    <p className="text-red-500 text-xs mt-1">This field is required</p>
-                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -386,16 +395,15 @@ export default function ESGFormPage() {
                   <Input
                     id="femaleEmployees"
                     type="number"
+                    inputMode="numeric"
                     min="0"
                     value={formData.femaleEmployees}
                     onChange={(e) => handleInputChange("femaleEmployees", e.target.value)}
                     placeholder="0"
                     className={`${!formData.femaleEmployees && error ? "border-red-500" : ""}`}
                     required
+                    {...numberGuardProps}
                   />
-                  {!formData.femaleEmployees && error && (
-                    <p className="text-red-500 text-xs mt-1">This field is required</p>
-                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -405,6 +413,7 @@ export default function ESGFormPage() {
                   <Input
                     id="trainingHours"
                     type="number"
+                    inputMode="decimal"
                     step="0.1"
                     min="0"
                     value={formData.trainingHours}
@@ -412,10 +421,8 @@ export default function ESGFormPage() {
                     placeholder="0.0"
                     className={`${!formData.trainingHours && error ? "border-red-500" : ""}`}
                     required
+                    {...numberGuardProps}
                   />
-                  {!formData.trainingHours && error && (
-                    <p className="text-red-500 text-xs mt-1">This field is required</p>
-                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -426,6 +433,7 @@ export default function ESGFormPage() {
                     <Input
                       id="communityInvestment"
                       type="number"
+                      inputMode="decimal"
                       step="0.01"
                       min="0"
                       value={formData.communityInvestment}
@@ -433,20 +441,18 @@ export default function ESGFormPage() {
                       placeholder="0.00"
                       className={`pr-12 ${!formData.communityInvestment && error ? "border-red-500" : ""}`}
                       required
+                      {...numberGuardProps}
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                       <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">INR</span>
                     </div>
                   </div>
-                  {!formData.communityInvestment && error && (
-                    <p className="text-red-500 text-xs mt-1">This field is required</p>
-                  )}
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Governance */}
+          {/* Governance Metrics */}
           <Card className="shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-xl">Governance Metrics</CardTitle>
@@ -462,6 +468,7 @@ export default function ESGFormPage() {
                     <Input
                       id="independentBoard"
                       type="number"
+                      inputMode="decimal"
                       step="0.1"
                       min="0"
                       max="100"
@@ -470,14 +477,12 @@ export default function ESGFormPage() {
                       placeholder="0.0"
                       className={`pr-10 ${!formData.independentBoard && error ? "border-red-500" : ""}`}
                       required
+                      {...numberGuardProps}
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                       <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">%</span>
                     </div>
                   </div>
-                  {!formData.independentBoard && error && (
-                    <p className="text-red-500 text-xs mt-1">This field is required</p>
-                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -506,6 +511,7 @@ export default function ESGFormPage() {
                     <Input
                       id="totalRevenue"
                       type="number"
+                      inputMode="decimal"
                       step="0.01"
                       min="0"
                       value={formData.totalRevenue}
@@ -513,20 +519,18 @@ export default function ESGFormPage() {
                       placeholder="0.00"
                       className={`pr-12 ${!formData.totalRevenue && error ? "border-red-500" : ""}`}
                       required
+                      {...numberGuardProps}
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                       <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">INR</span>
                     </div>
                   </div>
-                  {!formData.totalRevenue && error && (
-                    <p className="text-red-500 text-xs mt-1">This field is required</p>
-                  )}
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Auto-Calculated Metrics (render as % but store fractions) */}
+          {/* Auto-Calculated Metrics */}
           <Card className="shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-xl">
@@ -535,9 +539,7 @@ export default function ESGFormPage() {
                   Real-time calculation
                 </Badge>
               </CardTitle>
-              <CardDescription>
-                These metrics are automatically calculated based on your inputs
-              </CardDescription>
+              <CardDescription>These metrics are automatically calculated based on your inputs</CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
