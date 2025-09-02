@@ -1,5 +1,3 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
@@ -7,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { Metadata } from "next";
+import { requireAuth } from "@/lib/auth-utils";
 
 export const metadata: Metadata = {
   title: "Home - ESG Tracker",
@@ -14,15 +13,11 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const session = await getServerSession(authOptions);
+  const { user } = await requireAuth();
 
-  if (!session) {
-    redirect("/login");
-  }
-
-  const [user, responses] = await Promise.all([
+  const [userData, responses] = await Promise.all([
     prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: user.id },
       select: {
         id: true,
         name: true,
@@ -32,24 +27,27 @@ export default async function HomePage() {
       },
     }),
     prisma.eSGResponse.findMany({
-      where: { userId: session.user.id },
+      where: { 
+        userId: user.id,
+        isDeleted: false,
+      },
       orderBy: { financialYear: 'desc' },
       take: 5,
     }),
   ]);
 
-  if (!user) {
+  if (!userData) {
     return <div>User not found</div>;
   }
 
   return (
-    <div className="flex justify-center items-center  px-4 sm:px-6 lg:px-8 py-8">
+    <div className="flex justify-center items-center px-4 sm:px-6 lg:px-8 py-8">
       <div className="w-full max-w-7xl mx-auto">
         <div className="flex flex-col items-center">
           <Card className="w-full max-w-5xl">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Welcome back, {user.name}!</CardTitle>
+                <CardTitle>Welcome back, {userData.name}!</CardTitle>
                 <Button asChild>
                   <Link href="/dashboard/esg-form">New ESG Report</Link>
                 </Button>

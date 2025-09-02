@@ -1,23 +1,22 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { HomeHeader } from "@/components/header";
 
-export default async function HomeLayout({
+export default async function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   
-  if (!session) {
+  if (!session?.user) {
     redirect("/login");
   }
 
   return (
     <div className="flex min-h-screen flex-col">
       <HomeHeader />
-      <div className="flex-1">{children}</div>
+      <main className="flex-1">{children}</main>
     </div>
-  )
+  );
 }

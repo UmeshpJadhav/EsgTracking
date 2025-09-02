@@ -1,6 +1,19 @@
-import NextAuth from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { GET, POST } from "@/auth";
 
-const handler = NextAuth(authOptions);
+export { GET, POST };
 
-export { handler as GET, handler as POST };
+// Add CORS headers if needed
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
+// Optional: Add CORS headers if your frontend is on a different domain
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
