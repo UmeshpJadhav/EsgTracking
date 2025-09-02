@@ -7,7 +7,9 @@ const appUrl = isProd ? (process.env.NEXT_PUBLIC_APP_URL || vercelUrl || 'https:
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   experimental: {
-    serverActions: true,
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
   },
   images: {
     domains: ['lh3.googleusercontent.com'],
