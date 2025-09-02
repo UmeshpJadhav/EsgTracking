@@ -9,11 +9,11 @@ type ResponseData = {
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     const { user } = await requireAuth();
-    const reportId = params?.id;
+    const reportId = context.params.id;
 
     if (!reportId) {
       return NextResponse.json<ResponseData>(
@@ -48,8 +48,8 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching report:', error);
     return NextResponse.json<ResponseData>(
-      { error: 'Failed to fetch report' },
-      { status: error instanceof Error ? 401 : 500 }
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 }
