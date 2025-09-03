@@ -43,7 +43,7 @@ export default function ReportsPage() {
         
         // If a specific year is selected, find and set it
         if (selectedYear !== "all") {
-          const selected = responseData.find(item => 
+          const selected = responseData.find((item: ReportData) => 
             item.financialYear.toString() === selectedYear
           );
           setSelectedResponse(selected || null);
@@ -65,7 +65,7 @@ export default function ReportsPage() {
     if (selectedYear === "all") {
       setSelectedResponse(null);
     } else {
-      const selected = data.find(item => 
+      const selected = data.find((item: ReportData) => 
         item.financialYear.toString() === selectedYear
       );
       setSelectedResponse(selected || null);
@@ -93,7 +93,7 @@ export default function ReportsPage() {
     }
     
     // If a specific year is selected, show only that year's data
-    const selectedData = data.find(d => d.financialYear.toString() === selectedYear);
+    const selectedData = data.find((item: ReportData) => item.financialYear.toString() === selectedYear);
     if (!selectedData) return [];
     
     return [{
@@ -125,7 +125,7 @@ export default function ReportsPage() {
       // Filter data based on selected year
       const exportData = selectedYear === "all" 
         ? data 
-        : data.filter(d => d.financialYear.toString() === selectedYear);
+        : data.filter((item: ReportData) => item.financialYear.toString() === selectedYear);
 
       // Add summary table
       doc.setFontSize(14);
@@ -228,7 +228,7 @@ export default function ReportsPage() {
         }));
       } else {
         // For a specific year, include detailed data
-        const selectedData = data.find(d => d.financialYear.toString() === selectedYear);
+        const selectedData = data.find((item: ReportData) => item.financialYear.toString() === selectedYear);
         if (selectedData) {
           exportData = [{
             // Summary
