@@ -59,8 +59,9 @@ export async function GET(
 // PUT /api/reports/[id]
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { params } = context;
   try {
     const { user } = await requireAuth();
     const reportId = params.id;
@@ -140,8 +141,9 @@ export async function PUT(
 // DELETE /api/reports/[id]
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { params } = context;
   try {
     const { user } = await requireAuth();
     const reportId = params.id;

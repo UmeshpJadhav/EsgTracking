@@ -39,6 +39,7 @@ const eslintConfig = [
       files: ["**/*.ts", "**/*.tsx"],
       plugins: {
         "@typescript-eslint": tseslint.plugin,
+        "react": (await import("eslint-plugin-react")).default,
       },
       rules: {
         ...tseslint.configs.recommended.rules,
