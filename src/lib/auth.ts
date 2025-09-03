@@ -73,41 +73,52 @@ export const authConfig: NextAuthConfig = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials?: Partial<Record<string, unknown>>, req?: Request) {
-        // Type guard to ensure credentials exist and have required fields
-        if (!credentials || 
-            typeof credentials.email !== 'string' || 
-            typeof credentials.password !== 'string') {
-          return null;
-        }
-
-        const user = await prisma.user.findUnique({
-          where: { 
-            email: credentials.email
-          },
-        });
-
-        // Allow login if user exists (even if they signed up with OAuth)
-        if (!user) {
-          return null;
-        }
-
-        // If user has a password, verify it
-        if (user.passwordHash) {
-          const isValid = await compare(credentials.password, user.passwordHash);
-          if (!isValid) {
+        try {
+          // Type guard to ensure credentials exist and have required fields
+          if (!credentials || 
+              typeof credentials.email !== 'string' || 
+              typeof credentials.password !== 'string') {
+            console.error('Invalid credentials format');
             return null;
           }
-        } else {
-          // If user doesn't have a password, they must sign in with OAuth
+
+          console.log('Attempting to authorize:', credentials.email);
+          
+          const user = await prisma.user.findUnique({
+            where: { 
+              email: credentials.email.toLowerCase().trim()
+            },
+          });
+
+          if (!user) {
+            console.error('No user found with email:', credentials.email);
+            return null;
+          }
+
+          // If user has a password, verify it
+          if (user.passwordHash) {
+            console.log('Verifying password for user:', user.id);
+            const isValid = await compare(credentials.password, user.passwordHash);
+            if (!isValid) {
+              console.error('Invalid password for user:', user.id);
+              return null;
+            }
+          } else {
+            console.error('No password set for user, must use OAuth:', user.id);
+            return null;
+          }
+
+          console.log('Successfully authenticated user:', user.id);
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name || '',
+            image: user.image || null,
+          };
+        } catch (error) {
+          console.error('Authentication error:', error);
           return null;
         }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name || '',
-          image: user.image || null,
-        };
       },
     },
   ],
@@ -150,6 +161,18 @@ export const authConfig: NextAuthConfig = {
   debug: process.env.NODE_ENV === 'development',
   secret: process.env.NEXTAUTH_SECRET,
   trustHost: true,
+  useSecureCookies: process.env.NODE_ENV === 'production',
+  cookies: {
+    sessionToken: {
+      name: `__Secure-next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
+  },
 };
 
 export default authConfig;
