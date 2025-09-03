@@ -7,13 +7,19 @@ type ResponseData = {
   error?: string;
 };
 
+type RouteParams = {
+  params: {
+    id: string;
+  };
+};
+
 export async function GET(
   request: Request,
-  context: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
     const { user } = await requireAuth();
-    const reportId = context.params.id;
+    const reportId = params.id;
 
     if (!reportId) {
       return NextResponse.json<ResponseData>(

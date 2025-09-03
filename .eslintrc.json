@@ -1,6 +1,11 @@
 {
-  "extends": ["next/core-web-vitals"],
-  "plugins": ["react"],
+  "extends": [
+    "next/core-web-vitals",
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended"
+  ],
+  "plugins": ["react", "react-hooks"],
   "rules": {
     "react/display-name": "off",
     "react/react-in-jsx-scope": "off",
@@ -9,6 +14,21 @@
   "settings": {
     "react": {
       "version": "detect"
+    },
+    "next": {
+      "rootDir": "./"
     }
+  },
+  "parserOptions": {
+    "ecmaVersion": 2021,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  },
+  "env": {
+    "browser": true,
+    "es2021": true,
+    "node": true
   }
 }
