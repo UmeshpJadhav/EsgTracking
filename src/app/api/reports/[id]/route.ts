@@ -2,14 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
 
+type ResponseData = {
+  data?: any;
+  error?: string;
+};
+
 // GET /api/reports/[id]
 export async function GET(
   request: NextRequest,
-  ctx: RouteContext<'/api/reports/[id]'>
+  { params }: { params: { id: string } }
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
-    const { id: reportId } = await ctx.params;
+    const reportId = params.id;
 
     if (!reportId) {
       return NextResponse.json(
@@ -32,6 +37,14 @@ export async function GET(
       );
     }
 
+    // Ensure the report belongs to the authenticated user
+    if (report.userId !== user.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
+
     return NextResponse.json({ data: report });
   } catch (error) {
     console.error('Error fetching report:', error);
@@ -45,11 +58,11 @@ export async function GET(
 // PUT /api/reports/[id]
 export async function PUT(
   request: NextRequest,
-  ctx: RouteContext<'/api/reports/[id]'>
+  { params }: { params: { id: string } }
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
-    const { id: reportId } = await ctx.params;
+    const reportId = params.id;
     const body = await request.json();
 
     if (!reportId) {
@@ -59,19 +72,27 @@ export async function PUT(
       );
     }
 
+    // Check if report exists and belongs to user
     const existingReport = await prisma.eSGResponse.findUnique({
       where: { id: reportId },
     });
 
-    if (!existingReport || existingReport.userId !== user.id) {
+    if (!existingReport) {
       return NextResponse.json(
-        { error: 'Report not found or unauthorized' },
+        { error: 'Report not found' },
         { status: 404 }
       );
     }
-    
-    // ... (rest of your PUT logic)
-    const updateData: any = { ...body };
+
+    if (existingReport.userId !== user.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
+
+    // Calculate metrics if relevant fields are updated
+    const updateData = { ...body };
     const { totalRevenue, carbonEmissions, renewableElectricity, totalElectricity, femaleEmployees, totalEmployees, communityInvestment } = body;
 
     if (totalRevenue !== undefined) {
@@ -96,6 +117,7 @@ export async function PUT(
         : (existingReport.femaleEmployees || 0) / (totalEmployees || 1);
     }
 
+    // Update the report
     const updatedReport = await prisma.eSGResponse.update({
       where: { id: reportId },
       data: {
@@ -105,7 +127,6 @@ export async function PUT(
     });
 
     return NextResponse.json({ data: updatedReport });
-
   } catch (error) {
     console.error('Error updating report:', error);
     return NextResponse.json(
@@ -118,11 +139,11 @@ export async function PUT(
 // DELETE /api/reports/[id]
 export async function DELETE(
   request: NextRequest,
-  ctx: RouteContext<'/api/reports/[id]'>
+  { params }: { params: { id: string } }
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
-    const { id: reportId } = await ctx.params;
+    const reportId = params.id;
 
     if (!reportId) {
       return NextResponse.json(
@@ -131,17 +152,26 @@ export async function DELETE(
       );
     }
 
+    // Check if report exists and belongs to user
     const existingReport = await prisma.eSGResponse.findUnique({
       where: { id: reportId },
     });
 
-    if (!existingReport || existingReport.userId !== user.id) {
+    if (!existingReport) {
       return NextResponse.json(
-        { error: 'Report not found or unauthorized' },
+        { error: 'Report not found' },
         { status: 404 }
       );
     }
 
+    if (existingReport.userId !== user.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
+
+    // Soft delete the report
     await prisma.eSGResponse.update({
       where: { id: reportId },
       data: {
@@ -159,4 +189,3 @@ export async function DELETE(
     );
   }
 }
-
