@@ -1,9 +1,11 @@
 import type { NextAuthConfig, Session, User, Account, Profile } from "next-auth";
+import type { AdapterUser } from "next-auth/adapters";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import { compare } from "bcryptjs";
+import type { JWT } from "next-auth/jwt";
 
 declare module "next-auth" {
   interface Session {
@@ -24,7 +26,12 @@ export const authConfig: NextAuthConfig = {
   adapter: {
     ...adapter,
     // Custom createUser implementation to handle OAuth users
-    async createUser(user) {
+    async createUser(user: {
+      name?: string | null;
+      email: string;
+      image?: string | null;
+      emailVerified?: Date | null;
+    }) {
       // Check if user with this email already exists
       const existingUser = await prisma.user.findUnique({
         where: { email: user.email },
@@ -46,7 +53,7 @@ export const authConfig: NextAuthConfig = {
       // If user doesn't exist, create a new one
       return prisma.user.create({
         data: {
-          name: user.name,
+          name: user.name || user.email.split('@')[0] || 'User', // Fallback to email prefix or 'User' if name is not provided
           email: user.email,
           emailVerified: user.emailVerified,
           image: user.image,
@@ -68,19 +75,26 @@ export const authConfig: NextAuthConfig = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
       allowDangerousEmailAccountLinking: true,
     }),
-    CredentialsProvider({
+    {
+      id: "credentials",
       name: "Credentials",
+      type: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+      async authorize(credentials?: Partial<Record<string, unknown>>, req?: Request) {
+        // Type guard to ensure credentials exist and have required fields
+        if (!credentials || 
+            typeof credentials.email !== 'string' || 
+            typeof credentials.password !== 'string') {
           return null;
         }
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { 
+            email: credentials.email
+          },
         });
 
         // Allow login if user exists (even if they signed up with OAuth)
@@ -102,11 +116,11 @@ export const authConfig: NextAuthConfig = {
         return {
           id: user.id,
           email: user.email,
-          name: user.name,
-          image: user.image,
+          name: user.name || '',
+          image: user.image || null,
         };
       },
-    }),
+    },
   ],
   callbacks: {
     async signIn({ user, account, profile, email, credentials }) {
@@ -133,17 +147,23 @@ export const authConfig: NextAuthConfig = {
     },
   },
   events: {
-    async linkAccount({ user, account, profile }) {
-      // This event is triggered when an account is linked
-      console.log('Account linked:', { userId: user.id, provider: account.provider });
+    async linkAccount(message: { user: User | AdapterUser; account: Account; profile: User | AdapterUser }) {
+      console.log('Account linked:', { 
+        userId: message.user.id, 
+        provider: message.account.provider 
+      });
     },
-    signIn: (message) => {
+    signIn: (message: { user: User; account?: Account | null; profile?: Profile; isNewUser?: boolean }) => {
       console.log('User signed in:', message.user?.email);
+      if (message.account) {
+        console.log('Provider:', message.account.provider);
+      }
     },
-    signOut: (message) => {
-      console.log('User signed out:', message.session?.user?.email);
+    signOut: () => {
+      console.log('User signed out');
     },
   },
+  
   debug: process.env.NODE_ENV === 'development',
   secret: process.env.NEXTAUTH_SECRET,
   trustHost: true,
