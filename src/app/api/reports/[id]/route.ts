@@ -2,20 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
 
-interface RouteContext {
-  params: {
-    id: string;
-  };
-}
+
 
 // GET /api/reports/[id]
 export async function GET(
   request: NextRequest,
-  context: RouteContext
+  context
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
-    const reportId = context.params.id;
+    const { id: reportId } = context.params;
 
     if (!reportId) {
       return NextResponse.json(
@@ -59,11 +55,11 @@ export async function GET(
 // PUT /api/reports/[id]
 export async function PUT(
   request: NextRequest,
-  context: RouteContext
+  context
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
-    const reportId = context.params.id;
+    const { id: reportId } = context.params;
     const body = await request.json();
 
     if (!reportId) {
@@ -161,11 +157,11 @@ export async function PUT(
 // DELETE /api/reports/[id]
 export async function DELETE(
   request: NextRequest,
-  context: RouteContext
+  context
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
-    const reportId = context.params.id;
+    const { id: reportId } = context.params;
 
     if (!reportId) {
       return NextResponse.json(
