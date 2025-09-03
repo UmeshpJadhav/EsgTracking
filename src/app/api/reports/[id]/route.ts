@@ -10,8 +10,9 @@ type ResponseData = {
 // GET /api/reports/[id]
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { params } = context;
   try {
     const { user } = await requireAuth();
     const reportId = params.id;
