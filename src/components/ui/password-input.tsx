@@ -6,7 +6,6 @@ import { Button } from "./button";
 import { Eye, EyeOff } from "lucide-react";
 
 export function PasswordInput({
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   className,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement>) {

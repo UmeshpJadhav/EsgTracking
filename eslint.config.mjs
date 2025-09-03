@@ -15,6 +15,7 @@ const isCI = process.env.CI === 'true';
 const eslintConfig = [
   ...[
     { ignores: [".next/**", "node_modules/**", "src/generated/**", "src/generated/prisma/**"] },
+    nextPlugin.configs.recommended,
     {
       languageOptions: {
         globals: {

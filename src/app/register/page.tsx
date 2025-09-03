@@ -41,7 +41,6 @@ export default function RegisterPage() {
 
       // Redirect to login page after successful registration
       router.push("/login?registered=true");
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       setError("Something went wrong. Please try again.");
     } finally {
