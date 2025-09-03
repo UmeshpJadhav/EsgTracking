@@ -152,7 +152,8 @@ export default function ReportsPage() {
       // Add detailed report if a specific year is selected
       if (selectedYear !== "all" && exportData.length > 0) {
         const selectedData = exportData[0];
-        yPosition = doc.lastAutoTable.finalY + 15;
+        // @ts-ignore - lastAutoTable is added by jspdf-autotable
+        yPosition = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 15 : yPosition + 20;
         
         // Add detailed report header
         doc.setFontSize(14);
