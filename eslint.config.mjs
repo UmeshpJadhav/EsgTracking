@@ -41,7 +41,6 @@ const eslintConfig = [
       plugins: {
         "@typescript-eslint": tseslint.plugin,
         "react": (await import("eslint-plugin-react")).default,
-        "next": nextPlugin,
       },
       settings: {
         react: {
@@ -73,7 +72,7 @@ const eslintConfig = [
     {
       files: ["**/*.tsx"],
       plugins: {
-        "@next/next": nextPlugin,
+        "@next/next": nextPlugin.plugin,
       },
       rules: {
         ...nextPlugin.configs.recommended.rules,
