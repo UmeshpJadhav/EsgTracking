@@ -2,17 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
 
-// Define the type for the route parameters
-type RouteParams = {
-  params: {
-    id: string;
-  };
-};
+
 
 // GET /api/reports/[id]
 export async function GET(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: { id: string } }
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
@@ -60,7 +55,7 @@ export async function GET(
 // PUT /api/reports/[id]
 export async function PUT(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: { id: string } }
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
@@ -162,7 +157,7 @@ export async function PUT(
 // DELETE /api/reports/[id]
 export async function DELETE(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: { id: string } }
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
@@ -212,3 +207,4 @@ export async function DELETE(
     );
   }
 }
+
