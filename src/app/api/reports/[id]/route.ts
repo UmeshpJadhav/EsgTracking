@@ -2,16 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
 
-
+interface RouteContext {
+  params: {
+    id: string;
+  };
+}
 
 // GET /api/reports/[id]
 export async function GET(
   request: NextRequest,
-  context
+  { params }: RouteContext
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
-    const { id: reportId } = context.params;
+    const reportId = params.id;
 
     if (!reportId) {
       return NextResponse.json(
@@ -55,11 +59,11 @@ export async function GET(
 // PUT /api/reports/[id]
 export async function PUT(
   request: NextRequest,
-  context
+  context: RouteContext
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
-    const { id: reportId } = context.params;
+    const reportId = context.params.id;
     const body = await request.json();
 
     if (!reportId) {
@@ -157,11 +161,11 @@ export async function PUT(
 // DELETE /api/reports/[id]
 export async function DELETE(
   request: NextRequest,
-  context
+  { params }: { params: { id: string } }
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
-    const { id: reportId } = context.params;
+    const reportId = params.id;
 
     if (!reportId) {
       return NextResponse.json(
@@ -193,8 +197,7 @@ export async function DELETE(
     await prisma.eSGResponse.update({
       where: { id: reportId },
       data: {
-        isDeleted: true,
-        deletedAt: new Date(),
+        isDeleted: true
       },
     });
 
@@ -207,4 +210,3 @@ export async function DELETE(
     );
   }
 }
-
