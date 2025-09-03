@@ -110,8 +110,9 @@ export interface User {
     interface Session {
       user: {
         id: string;
-        name?: string | null;
-        email?: string | null;
+        name: string;
+        email: string;
+        image?: string | null;
       };
     }
   }

@@ -7,17 +7,6 @@ import { prisma } from "./prisma";
 import { compare } from "bcryptjs";
 import type { JWT } from "next-auth/jwt";
 
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string;
-      name: string;
-      email: string;
-      image?: string | null;
-    };
-  }
-}
-
 // Create a custom adapter with proper typing
 const adapter = PrismaAdapter(prisma);
 
