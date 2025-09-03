@@ -147,8 +147,7 @@ export async function DELETE(req: NextRequest) {
         userId: user.id, // Ensure user can only delete their own responses
       },
       data: {
-        isDeleted: true,
-        deletedAt: new Date(),
+        isDeleted: true
       },
     });
 
