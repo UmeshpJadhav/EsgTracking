@@ -1,21 +1,19 @@
 {
   "extends": ["next/core-web-vitals"],
-  "plugins": ["@typescript-eslint"],
+  "plugins": ["react"],
   "rules": {
-    "@next/next/no-html-link-for-pages": "off",
     "react/display-name": "off",
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off"
   },
   "settings": {
-    "next": {
-      "rootDir": "."
-    },
     "react": {
       "version": "detect"
+    },
+    "next": {
+      "rootDir": "./"
     }
   },
-  "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": 2021,
     "sourceType": "module",

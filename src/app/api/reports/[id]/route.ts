@@ -7,15 +7,16 @@ type ResponseData = {
   error?: string;
 };
 
-type RouteParams = {
+type RouteContext = {
   params: {
     id: string;
   };
 };
 
+// GET /api/reports/[id]
 export async function GET(
   request: Request,
-  context: { params: { id: string } }
+  context: RouteContext
 ): Promise<NextResponse<ResponseData>> {
   try {
     const { user } = await requireAuth();
@@ -60,17 +61,18 @@ export async function GET(
   }
 }
 
+// PUT /api/reports/[id]
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
-) {
+  context: RouteContext
+): Promise<NextResponse<ResponseData>> {
   try {
     const { user } = await requireAuth();
-    const reportId = params?.id;
+    const reportId = context.params.id;
     const body = await request.json();
 
     if (!reportId) {
-      return NextResponse.json<ResponseData>(
+      return NextResponse.json(
         { error: 'Report ID is required' },
         { status: 400 }
       );
@@ -82,14 +84,14 @@ export async function PUT(
     });
 
     if (!existingReport) {
-      return NextResponse.json<ResponseData>(
+      return NextResponse.json(
         { error: 'Report not found' },
         { status: 404 }
       );
     }
 
     if (existingReport.userId !== user.id) {
-      return NextResponse.json<ResponseData>(
+      return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
       );
@@ -130,26 +132,27 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json<ResponseData>({ data: updatedReport });
+    return NextResponse.json({ data: updatedReport });
   } catch (error) {
     console.error('Error updating report:', error);
-    return NextResponse.json<ResponseData>(
+    return NextResponse.json(
       { error: 'Failed to update report' },
-      { status: error instanceof Error ? 401 : 500 }
+      { status: 500 }
     );
   }
 }
 
+// DELETE /api/reports/[id]
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
-) {
+  context: RouteContext
+): Promise<NextResponse<ResponseData>> {
   try {
     const { user } = await requireAuth();
-    const reportId = params?.id;
+    const reportId = context.params.id;
 
     if (!reportId) {
-      return NextResponse.json<ResponseData>(
+      return NextResponse.json(
         { error: 'Report ID is required' },
         { status: 400 }
       );
@@ -161,14 +164,14 @@ export async function DELETE(
     });
 
     if (!existingReport) {
-      return NextResponse.json<ResponseData>(
+      return NextResponse.json(
         { error: 'Report not found' },
         { status: 404 }
       );
     }
 
     if (existingReport.userId !== user.id) {
-      return NextResponse.json<ResponseData>(
+      return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
       );
@@ -183,12 +186,12 @@ export async function DELETE(
       },
     });
 
-    return NextResponse.json<ResponseData>({ data: { success: true } });
+    return NextResponse.json({ data: { success: true } });
   } catch (error) {
     console.error('Error deleting report:', error);
-    return NextResponse.json<ResponseData>(
+    return NextResponse.json(
       { error: 'Failed to delete report' },
-      { status: error instanceof Error ? 401 : 500 }
+      { status: 500 }
     );
   }
 }
