@@ -12,75 +12,71 @@ const __dirname = dirname(__filename);
 
 const isCI = process.env.CI === 'true';
 
-const eslintConfig = [
-  ...[
-    { ignores: [".next/**", "node_modules/**", "src/generated/**", "src/generated/prisma/**"] },
-    nextPlugin.configs.recommended,
-    {
-      languageOptions: {
-        globals: {
-          ...globals.browser,
-          ...globals.node,
-          React: "readonly",
-          JSX: "readonly",
+export default tseslint.config(
+  {
+    ignores: [
+      ".next/**", 
+      "node_modules/**", 
+      "src/generated/**",
+      "**/*.d.ts"
+    ]
+  },
+  {
+    files: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
+    plugins: {
+      "@typescript-eslint": tseslint.plugin,
+      "react": (await import("eslint-plugin-react")).default,
+      "@next/next": nextPlugin
+    },
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        React: "readonly",
+        JSX: "readonly",
+      },
+      parser: tseslint.parser,
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+        ecmaFeatures: {
+          jsx: true,
         },
-        parserOptions: {
-          ecmaVersion: "latest",
-          sourceType: "module",
-          ecmaFeatures: {
-            jsx: true,
-          },
-          project: "./tsconfig.json",
-        },
+        project: "./tsconfig.json",
       },
     },
-    js.configs.recommended,
-    ...tseslint.configs.recommended,
-    {
-      files: ["**/*.ts", "**/*.tsx"],
-      plugins: {
-        "@typescript-eslint": tseslint.plugin,
-        "react": (await import("eslint-plugin-react")).default,
+    settings: {
+      react: {
+        version: "detect",
       },
-      settings: {
-        react: {
-          version: "detect"
-        }
-      },
-      rules: {
-        ...tseslint.configs.recommended.rules,
-        ...reactRecommended.rules,
-        "@typescript-eslint/no-explicit-any": "off",
-        "@typescript-eslint/no-unused-vars": isCI ? "off" : "warn",
-        "@typescript-eslint/no-empty-object-type": "off",
-        "@typescript-eslint/no-unsafe-argument": "off",
-        "react/prop-types": "off",
-        "@typescript-eslint/no-unsafe-assignment": "off",
-        "@typescript-eslint/no-unsafe-call": "off",
-        "@typescript-eslint/no-unsafe-member-access": "off",
-        "@typescript-eslint/no-unsafe-return": "off",
-        "@typescript-eslint/require-await": "off",
-        "@typescript-eslint/restrict-template-expressions": "off",
-        "@typescript-eslint/no-misused-promises": "off",
-        "@typescript-eslint/no-floating-promises": "off",
-        "@typescript-eslint/no-unnecessary-type-assertion": "off",
-        "@typescript-eslint/no-non-null-assertion": "off",
-        "@typescript-eslint/no-unsafe-argument": "off",
-        "@typescript-eslint/ban-ts-comment": "off",
-      },
+      next: {
+        rootDir: ["./src"]
+      }
     },
-    {
-      files: ["**/*.tsx"],
-      plugins: {
-        "@next/next": nextPlugin.plugin,
-      },
-      rules: {
-        ...nextPlugin.configs.recommended.rules,
-        ...nextPlugin.configs[`core-web-vitals`].rules,
-        "@next/next/no-html-link-for-pages": "off",
-      },
+    rules: {
+      ...js.configs.recommended.rules,
+      ...nextPlugin.configs.recommended.rules,
+      ...reactRecommended.rules,
+      "react/react-in-jsx-scope": "off",
+      "react/prop-types": "off",
+      "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/explicit-function-return-type": "off",
+      "@typescript-eslint/no-non-null-assertion": "warn"
     },
-  ],
-];
-
-export default eslintConfig;
+  },
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      ...tseslint.configs.recommended.rules,
+      "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    },
+  },
+  {
+    files: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
+    rules: {
+      "@typescript-eslint/no-non-null-assertion": "off",
+      "@typescript-eslint/no-explicit-any": "off"
+    },
+  }
+);

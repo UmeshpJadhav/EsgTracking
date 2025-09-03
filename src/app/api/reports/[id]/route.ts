@@ -2,19 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
 
-type ResponseData = {
-  data?: any;
-  error?: string;
-};
-
 // GET /api/reports/[id]
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
-    const reportId = context.params.id;
+    const reportId = params.id;
 
     if (!reportId) {
       return NextResponse.json(
@@ -58,11 +53,11 @@ export async function GET(
 // PUT /api/reports/[id]
 export async function PUT(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
-    const reportId = context.params.id;
+    const reportId = params.id;
     const body = await request.json();
 
     if (!reportId) {
@@ -92,13 +87,13 @@ export async function PUT(
     }
 
     // Calculate metrics if relevant fields are updated
-    const updateData = { ...body };
+    const updateData: any = { ...body };
     const { totalRevenue, carbonEmissions, renewableElectricity, totalElectricity, femaleEmployees, totalEmployees, communityInvestment } = body;
 
     if (totalRevenue !== undefined) {
       updateData.carbonIntensity = carbonEmissions !== undefined 
         ? carbonEmissions / (totalRevenue || 1) 
-        : existingReport.carbonEmissions / (totalRevenue || 1);
+        : (existingReport.carbonEmissions || 0) / (totalRevenue || 1);
       
       updateData.communitySpendRatio = communityInvestment !== undefined
         ? communityInvestment / (totalRevenue || 1)
@@ -139,11 +134,11 @@ export async function PUT(
 // DELETE /api/reports/[id]
 export async function DELETE(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
-    const reportId = context.params.id;
+    const reportId = params.id;
 
     if (!reportId) {
       return NextResponse.json(
