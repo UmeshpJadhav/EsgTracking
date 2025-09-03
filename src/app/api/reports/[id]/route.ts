@@ -7,20 +7,14 @@ type ResponseData = {
   error?: string;
 };
 
-type RouteContext = {
-  params: {
-    id: string;
-  };
-};
-
 // GET /api/reports/[id]
 export async function GET(
   request: Request,
-  context: RouteContext
-): Promise<NextResponse<ResponseData>> {
+  { params }: { params: { id: string } }
+) {
   try {
     const { user } = await requireAuth();
-    const reportId = context.params.id;
+    const reportId = params.id;
 
     if (!reportId) {
       return NextResponse.json(
@@ -64,11 +58,11 @@ export async function GET(
 // PUT /api/reports/[id]
 export async function PUT(
   request: Request,
-  context: RouteContext
-): Promise<NextResponse<ResponseData>> {
+  { params }: { params: { id: string } }
+) {
   try {
     const { user } = await requireAuth();
-    const reportId = context.params.id;
+    const reportId = params.id;
     const body = await request.json();
 
     if (!reportId) {
@@ -145,11 +139,11 @@ export async function PUT(
 // DELETE /api/reports/[id]
 export async function DELETE(
   request: Request,
-  context: RouteContext
-): Promise<NextResponse<ResponseData>> {
+  { params }: { params: { id: string } }
+) {
   try {
     const { user } = await requireAuth();
-    const reportId = context.params.id;
+    const reportId = params.id;
 
     if (!reportId) {
       return NextResponse.json(
