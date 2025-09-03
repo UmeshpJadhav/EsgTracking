@@ -117,18 +117,12 @@ export const authConfig: NextAuthConfig = {
       return true;
     },
     session: ({ session, token }) => {
-      if (token) {
-        return {
-          ...session,
-          user: {
-            ...session.user,
-            id: token.sub,
-          },
-        };
+      if (token && session.user) {
+        session.user.id = token.sub as string;
       }
       return session;
     },
-    jwt: ({ token, user }) => {
+    jwt: async ({ token, user }) => {
       if (user) {
         token.sub = user.id;
       }
