@@ -255,9 +255,11 @@ export default function ReportsPage() {
       }
 
       // Create workbook and worksheet
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      // FIXED - Ensure exportData is never undefined
+      const worksheet = XLSX.utils.json_to_sheet(exportData || []);
+
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "ESG Report");
+      XLSX.utils.book_append_sheet(workbook, worksheet, "ESG Report"); 
       
       // Save the file
       XLSX.writeFile(workbook, `esg-report-${selectedYear === "all" ? 'all-years' : `FY-${selectedYear}`}-${new Date().toISOString().slice(0, 10)}.xlsx`);
