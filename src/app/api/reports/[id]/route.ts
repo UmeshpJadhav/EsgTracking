@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
 
+// Define the type for the route parameters
+type RouteParams = {
+  params: {
+    id: string;
+  };
+};
+
 // GET /api/reports/[id]
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
@@ -53,7 +60,7 @@ export async function GET(
 // PUT /api/reports/[id]
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
@@ -86,9 +93,30 @@ export async function PUT(
       );
     }
 
+    // Define the type for the update data
+    interface UpdateData {
+      carbonIntensity?: number;
+      communitySpendRatio?: number;
+      renewableRatio?: number;
+      diversityRatio?: number;
+      [key: string]: any; // For other fields that might be updated
+    }
+
     // Calculate metrics if relevant fields are updated
-    const updateData: any = { ...body };
-    const { totalRevenue, carbonEmissions, renewableElectricity, totalElectricity, femaleEmployees, totalEmployees, communityInvestment } = body;
+    const updateData: UpdateData = {};
+    const { 
+      totalRevenue, 
+      carbonEmissions, 
+      renewableElectricity, 
+      totalElectricity, 
+      femaleEmployees, 
+      totalEmployees, 
+      communityInvestment,
+      ...restBody
+    } = body;
+
+    // Add any other fields from the request body
+    Object.assign(updateData, restBody);
 
     if (totalRevenue !== undefined) {
       updateData.carbonIntensity = carbonEmissions !== undefined 
@@ -134,7 +162,7 @@ export async function PUT(
 // DELETE /api/reports/[id]
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
