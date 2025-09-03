@@ -8,7 +8,6 @@ import { Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { format } from "date-fns";
 
 interface ReportData {
   id: string;
@@ -423,28 +422,28 @@ export default function ReportsPage() {
                   dataKey="Carbon Intensity" 
                   name="Carbon Intensity (T CO2e/INR)" 
                   fill="#3b82f6"
-                  fillOpacity={0.8}
+                  fillOpacity={1}
                 />
                 <Bar 
                   yAxisId="left" 
                   dataKey="Community %" 
                   name="Community %" 
                   fill="#ef4444"
-                  fillOpacity={0.8}
+                  fillOpacity={1}
                 />
                 <Bar 
                   yAxisId="left" 
                   dataKey="Diversity %" 
                   name="Diversity %" 
                   fill="#f59e0b"
-                  fillOpacity={0.8}
+                  fillOpacity={1}
                 />
                 <Bar 
                   yAxisId="left" 
                   dataKey="Renewable %" 
                   name="Renewable %" 
                   fill="#10b981"
-                  fillOpacity={0.8}
+                  fillOpacity={1}
                 />
               </BarChart>
             </ResponsiveContainer>

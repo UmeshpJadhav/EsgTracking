@@ -1,11 +1,10 @@
-import type { NextAuthConfig, Session, User, Account, Profile } from "next-auth";
+import type { NextAuthConfig, User, Account, Profile } from "next-auth";
 import type { AdapterUser } from "next-auth/adapters";
 import GoogleProvider from "next-auth/providers/google";
-import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import { compare } from "bcryptjs";
-import type { JWT } from "next-auth/jwt";
+
 
 // Create a custom adapter with proper typing
 const adapter = PrismaAdapter(prisma);
@@ -109,7 +108,7 @@ export const authConfig: NextAuthConfig = {
           }
 
           console.log('Successfully authenticated user:', user.id);
-          console.log("authorize user:", user);
+          
           return {
             id: user.id,
             email: user.email,
@@ -129,16 +128,14 @@ export const authConfig: NextAuthConfig = {
       return true;
     },
     session: ({ session, token }) => {
-      console.log("session session:", session);
-      console.log("session token:", token);
+     
       if (token && session.user) {
         session.user.id = token.sub as string;
       }
       return session;
     },
     jwt: async ({ token, user }) => {
-      console.log("jwt token:", token);
-      console.log("jwt user:", user);
+      
       if (user) {
         token.sub = user.id;
       }
