@@ -423,28 +423,28 @@ export default function ReportsPage() {
                   dataKey="Carbon Intensity" 
                   name="Carbon Intensity (T CO2e/INR)" 
                   fill="#3b82f6"
-                  fillOpacity={({ payload }) => (payload.isSelected ? 1 : 0.6)}
+                  fillOpacity={0.8}
                 />
                 <Bar 
                   yAxisId="left" 
                   dataKey="Community %" 
                   name="Community %" 
                   fill="#ef4444"
-                  fillOpacity={({ payload }) => (payload.isSelected ? 1 : 0.6)}
+                  fillOpacity={0.8}
                 />
                 <Bar 
                   yAxisId="left" 
                   dataKey="Diversity %" 
                   name="Diversity %" 
                   fill="#f59e0b"
-                  fillOpacity={({ payload }) => (payload.isSelected ? 1 : 0.6)}
+                  fillOpacity={0.8}
                 />
                 <Bar 
                   yAxisId="left" 
                   dataKey="Renewable %" 
                   name="Renewable %" 
                   fill="#10b981"
-                  fillOpacity={({ payload }) => (payload.isSelected ? 1 : 0.6)}
+                  fillOpacity={0.8}
                 />
               </BarChart>
             </ResponsiveContainer>
