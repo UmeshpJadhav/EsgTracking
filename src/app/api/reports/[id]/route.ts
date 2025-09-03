@@ -15,14 +15,14 @@ type RouteParams = {
 
 export async function GET(
   request: Request,
-  { params }: RouteParams
-) {
+  context: { params: { id: string } }
+): Promise<NextResponse<ResponseData>> {
   try {
     const { user } = await requireAuth();
-    const reportId = params.id;
+    const reportId = context.params.id;
 
     if (!reportId) {
-      return NextResponse.json<ResponseData>(
+      return NextResponse.json(
         { error: 'Report ID is required' },
         { status: 400 }
       );
@@ -36,7 +36,7 @@ export async function GET(
     });
 
     if (!report) {
-      return NextResponse.json<ResponseData>(
+      return NextResponse.json(
         { error: 'Report not found' },
         { status: 404 }
       );
@@ -44,16 +44,16 @@ export async function GET(
 
     // Ensure the report belongs to the authenticated user
     if (report.userId !== user.id) {
-      return NextResponse.json<ResponseData>(
+      return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
       );
     }
 
-    return NextResponse.json<ResponseData>({ data: report });
+    return NextResponse.json({ data: report });
   } catch (error) {
     console.error('Error fetching report:', error);
-    return NextResponse.json<ResponseData>(
+    return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
