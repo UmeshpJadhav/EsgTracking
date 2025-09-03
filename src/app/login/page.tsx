@@ -2,7 +2,7 @@
 
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,9 @@ function LoginForm() {
   const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
 
   useEffect(() => {
-    if (searchParams?.get("registered") === "true") {
+    if (searchParams?.get("error") === "CredentialsSignin") {
+      setError("Invalid email or password");
+    } else if (searchParams?.get("registered") === "true") {
       setError("Registration successful! Please sign in to continue.");
     }
   }, [searchParams]);
@@ -29,12 +31,20 @@ function LoginForm() {
     setError(null);
     setGoogleLoading(true);
     try {
-      // Force a full page reload after successful Google sign-in
-      await signIn("google", { callbackUrl, redirect: false });
+      const result = await signIn('google', { 
+        callbackUrl,
+        redirect: false 
+      });
+      
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+      
+      // Force a page reload to ensure session is properly set
       window.location.href = callbackUrl;
     } catch (error) {
       console.error('Google sign in error:', error);
-      setError("Failed to sign in with Google");
+      setError("Failed to sign in with Google. Please try again.");
       setGoogleLoading(false);
     }
   };
@@ -62,7 +72,7 @@ function LoginForm() {
         return;
       }
 
-      // Force a full page reload to ensure session is properly set
+      // Force a page reload to ensure session is properly set
       window.location.href = callbackUrl;
     } catch (error) {
       console.error('Login error:', error);
@@ -77,7 +87,9 @@ function LoginForm() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
           <CardTitle>Sign In</CardTitle>
-          <p className="text-sm text-muted-foreground">Enter your credentials to access your account</p>
+          <p className="text-sm text-muted-foreground">
+            Enter your credentials to access your account
+          </p>
         </CardHeader>
         <CardContent>
           {error && (
@@ -145,7 +157,7 @@ function LoginForm() {
         </CardContent>
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">
-            Don’t have an account?{' '}
+            Don't have an account?{' '}
             <a href="/register" className="text-primary hover:underline">
               Sign up
             </a>
@@ -157,9 +169,5 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <LoginForm />
-    </Suspense>
-  );
+  return <LoginForm />;
 }
