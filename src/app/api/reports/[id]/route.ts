@@ -5,10 +5,11 @@ import { prisma } from '@/lib/prisma';
 // GET /api/reports/[id]
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
+    const params = await context.params;
     const reportId = params.id;
 
     if (!reportId) {
@@ -53,11 +54,12 @@ export async function GET(
 // PUT /api/reports/[id]
 export async function PUT(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
-    const reportId = context.params.id;
+    const params = await context.params;
+    const reportId = params.id;
     const body = await request.json();
 
     if (!reportId) {
@@ -155,10 +157,11 @@ export async function PUT(
 // DELETE /api/reports/[id]
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
+    const params = await context.params;
     const reportId = params.id;
 
     if (!reportId) {
