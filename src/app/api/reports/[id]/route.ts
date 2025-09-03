@@ -2,16 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
 
-interface RouteContext {
-  params: {
-    id: string;
-  };
-}
-
 // GET /api/reports/[id]
 export async function GET(
   request: NextRequest,
-  { params }: RouteContext
+  { params }: { params: { id: string } }
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
@@ -59,7 +53,7 @@ export async function GET(
 // PUT /api/reports/[id]
 export async function PUT(
   request: NextRequest,
-  context: RouteContext
+  context: { params: { id: string } }
 ): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
