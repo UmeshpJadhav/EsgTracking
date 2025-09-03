@@ -2,48 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
 
-// GET /api/reports/[id]
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
+// GET /api/responses - Get all ESG responses for the authenticated user
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
-    const params = await context.params;
-    const reportId = params.id;
 
-    if (!reportId) {
-      return NextResponse.json(
-        { error: 'Report ID is required' },
-        { status: 400 }
-      );
-    }
-
-    const report = await prisma.eSGResponse.findUnique({
+    const responses = await prisma.eSGResponse.findMany({
       where: {
-        id: reportId,
         userId: user.id,
+        isDeleted: false,
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
 
-    if (!report) {
-      return NextResponse.json(
-        { error: 'Report not found' },
-        { status: 404 }
-      );
-    }
-
-    // Ensure the report belongs to the authenticated user
-    if (report.userId !== user.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
-    }
-
-    return NextResponse.json({ data: report });
+    return NextResponse.json({ data: responses });
   } catch (error) {
-    console.error('Error fetching report:', error);
+    console.error('Error fetching responses:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -51,158 +27,169 @@ export async function GET(
   }
 }
 
-// PUT /api/reports/[id]
-export async function PUT(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
+// POST /api/responses - Create a new ESG response
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
-    const params = await context.params;
-    const reportId = params.id;
     const body = await request.json();
 
-    if (!reportId) {
+    const {
+      companyName,
+      reportingPeriod,
+      totalRevenue,
+      carbonEmissions,
+      renewableElectricity,
+      totalElectricity,
+      femaleEmployees,
+      totalEmployees,
+      communityInvestment,
+      ...additionalData
+    } = body;
+
+    // Calculate derived metrics
+    const carbonIntensity = carbonEmissions / (totalRevenue || 1);
+    const renewableRatio = renewableElectricity / (totalElectricity || 1);
+    const diversityRatio = femaleEmployees / (totalEmployees || 1);
+    const communitySpendRatio = communityInvestment / (totalRevenue || 1);
+
+    const response = await prisma.eSGResponse.create({
+      data: {
+        userId: user.id,
+        companyName,
+        reportingPeriod,
+        totalRevenue,
+        carbonEmissions,
+        renewableElectricity,
+        totalElectricity,
+        femaleEmployees,
+        totalEmployees,
+        communityInvestment,
+        carbonIntensity,
+        renewableRatio,
+        diversityRatio,
+        communitySpendRatio,
+        ...additionalData,
+      },
+    });
+
+    return NextResponse.json({ data: response }, { status: 201 });
+  } catch (error) {
+    console.error('Error creating response:', error);
+    return NextResponse.json(
+      { error: 'Failed to create response' },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT /api/responses - Bulk update ESG responses
+export async function PUT(request: NextRequest): Promise<NextResponse> {
+  try {
+    const { user } = await requireAuth();
+    const body = await request.json();
+    const { ids, updateData } = body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json(
-        { error: 'Report ID is required' },
+        { error: 'IDs array is required' },
         { status: 400 }
       );
     }
 
-    // Check if report exists and belongs to user
-    const existingReport = await prisma.eSGResponse.findUnique({
-      where: { id: reportId },
+    // Verify all reports belong to the user
+    const reports = await prisma.eSGResponse.findMany({
+      where: {
+        id: { in: ids },
+        userId: user.id,
+        isDeleted: false,
+      },
     });
 
-    if (!existingReport) {
+    if (reports.length !== ids.length) {
       return NextResponse.json(
-        { error: 'Report not found' },
+        { error: 'Some reports not found or unauthorized' },
         { status: 404 }
       );
     }
 
-    if (existingReport.userId !== user.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
-    }
-
-    // Define the type for the update data
-    interface UpdateData {
-      carbonIntensity?: number;
-      communitySpendRatio?: number;
-      renewableRatio?: number;
-      diversityRatio?: number;
-      [key: string]: any; // For other fields that might be updated
-    }
-
-    // Calculate metrics if relevant fields are updated
-    const updateData: UpdateData = {};
-    const { 
-      totalRevenue, 
-      carbonEmissions, 
-      renewableElectricity, 
-      totalElectricity, 
-      femaleEmployees, 
-      totalEmployees, 
-      communityInvestment,
-      ...restBody
-    } = body;
-
-    // Add any other fields from the request body
-    Object.assign(updateData, restBody);
-
-    if (totalRevenue !== undefined) {
-      updateData.carbonIntensity = carbonEmissions !== undefined 
-        ? carbonEmissions / (totalRevenue || 1) 
-        : (existingReport.carbonEmissions || 0) / (totalRevenue || 1);
-      
-      updateData.communitySpendRatio = communityInvestment !== undefined
-        ? communityInvestment / (totalRevenue || 1)
-        : (existingReport.communityInvestment || 0) / (totalRevenue || 1);
-    }
-
-    if (totalElectricity !== undefined) {
-      updateData.renewableRatio = renewableElectricity !== undefined
-        ? renewableElectricity / (totalElectricity || 1)
-        : (existingReport.renewableElectricity || 0) / (totalElectricity || 1);
-    }
-
-    if (totalEmployees !== undefined) {
-      updateData.diversityRatio = femaleEmployees !== undefined
-        ? femaleEmployees / (totalEmployees || 1)
-        : (existingReport.femaleEmployees || 0) / (totalEmployees || 1);
-    }
-
-    // Update the report
-    const updatedReport = await prisma.eSGResponse.update({
-      where: { id: reportId },
+    // Update all reports
+    const updatedReports = await prisma.eSGResponse.updateMany({
+      where: {
+        id: { in: ids },
+        userId: user.id,
+      },
       data: {
         ...updateData,
         updatedAt: new Date(),
       },
     });
 
-    return NextResponse.json({ data: updatedReport });
+    return NextResponse.json({ 
+      data: { 
+        updated: updatedReports.count,
+        message: `Updated ${updatedReports.count} reports successfully`
+      } 
+    });
   } catch (error) {
-    console.error('Error updating report:', error);
+    console.error('Error bulk updating responses:', error);
     return NextResponse.json(
-      { error: 'Failed to update report' },
+      { error: 'Failed to update responses' },
       { status: 500 }
     );
   }
 }
 
-// DELETE /api/reports/[id]
-export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
+// DELETE /api/responses - Bulk soft delete ESG responses
+export async function DELETE(request: NextRequest): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
-    const params = await context.params;
-    const reportId = params.id;
+    const body = await request.json();
+    const { ids } = body;
 
-    if (!reportId) {
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json(
-        { error: 'Report ID is required' },
+        { error: 'IDs array is required' },
         { status: 400 }
       );
     }
 
-    // Check if report exists and belongs to user
-    const existingReport = await prisma.eSGResponse.findUnique({
-      where: { id: reportId },
+    // Verify all reports belong to the user
+    const reports = await prisma.eSGResponse.findMany({
+      where: {
+        id: { in: ids },
+        userId: user.id,
+        isDeleted: false,
+      },
     });
 
-    if (!existingReport) {
+    if (reports.length !== ids.length) {
       return NextResponse.json(
-        { error: 'Report not found' },
+        { error: 'Some reports not found or unauthorized' },
         { status: 404 }
       );
     }
 
-    if (existingReport.userId !== user.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
-    }
-
-    // Soft delete the report
-    await prisma.eSGResponse.update({
-      where: { id: reportId },
+    // Soft delete all reports
+    const deletedReports = await prisma.eSGResponse.updateMany({
+      where: {
+        id: { in: ids },
+        userId: user.id,
+      },
       data: {
-        isDeleted: true
+        isDeleted: true,
       },
     });
 
-    return NextResponse.json({ data: { success: true } });
+    return NextResponse.json({ 
+      data: { 
+        deleted: deletedReports.count,
+        message: `Deleted ${deletedReports.count} reports successfully`
+      } 
+    });
   } catch (error) {
-    console.error('Error deleting report:', error);
+    console.error('Error bulk deleting responses:', error);
     return NextResponse.json(
-      { error: 'Failed to delete report' },
+      { error: 'Failed to delete responses' },
       { status: 500 }
     );
   }
