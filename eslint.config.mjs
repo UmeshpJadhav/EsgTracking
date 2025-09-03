@@ -1,6 +1,5 @@
 import { dirname } from "path";
 import { fileURLToPath } from "url";
-import { fixupConfigRules } from "@eslint/compat";
 import js from "@eslint/js";
 import nextPlugin from "@next/eslint-plugin-next";
 import reactRecommended from "eslint-plugin-react/configs/recommended.js";
@@ -9,8 +8,6 @@ import tseslint from "typescript-eslint";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-const isCI = process.env.CI === 'true';
 
 export default tseslint.config(
   {
@@ -57,9 +54,20 @@ export default tseslint.config(
       ...js.configs.recommended.rules,
       ...nextPlugin.configs.recommended.rules,
       ...reactRecommended.rules,
+      // React specific
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
-      "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+      // Variables
+      "no-unused-vars": "off", // Turn off base rule
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { 
+          "argsIgnorePattern": "^_",
+          "varsIgnorePattern": "^_",
+          "caughtErrorsIgnorePattern": "^_"
+        }
+      ],
+      // TypeScript
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/no-non-null-assertion": "warn"
@@ -69,14 +77,20 @@ export default tseslint.config(
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
       ...tseslint.configs.recommended.rules,
-      "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
     },
   },
   {
-    files: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
+    files: [
+      "**/*.test.ts", 
+      "**/*.test.tsx", 
+      "**/*.spec.ts", 
+      "**/*.spec.tsx",
+      "**/*.d.ts"
+    ],
     rules: {
       "@typescript-eslint/no-non-null-assertion": "off",
-      "@typescript-eslint/no-explicit-any": "off"
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": "off"
     },
   }
 );
