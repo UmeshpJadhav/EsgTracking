@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
 
@@ -9,9 +9,9 @@ type ResponseData = {
 
 // GET /api/reports/[id]
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
-): Promise<NextResponse<ResponseData>> {
+): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
     const reportId = params.id;
@@ -57,9 +57,9 @@ export async function GET(
 
 // PUT /api/reports/[id]
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
-): Promise<NextResponse<ResponseData>> {
+): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
     const reportId = params.id;
@@ -138,9 +138,9 @@ export async function PUT(
 
 // DELETE /api/reports/[id]
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
-): Promise<NextResponse<ResponseData>> {
+): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
     const reportId = params.id;
