@@ -109,6 +109,7 @@ export const authConfig: NextAuthConfig = {
           }
 
           console.log('Successfully authenticated user:', user.id);
+          console.log("authorize user:", user);
           return {
             id: user.id,
             email: user.email,
@@ -128,12 +129,16 @@ export const authConfig: NextAuthConfig = {
       return true;
     },
     session: ({ session, token }) => {
+      console.log("session session:", session);
+      console.log("session token:", token);
       if (token && session.user) {
         session.user.id = token.sub as string;
       }
       return session;
     },
     jwt: async ({ token, user }) => {
+      console.log("jwt token:", token);
+      console.log("jwt user:", user);
       if (user) {
         token.sub = user.id;
       }
