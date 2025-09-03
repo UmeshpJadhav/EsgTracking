@@ -10,11 +10,11 @@ type ResponseData = {
 // GET /api/reports/[id]
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
-) {
+  params: { params: { id: string } }
+): Promise<NextResponse<ResponseData>> {
   try {
     const { user } = await requireAuth();
-    const reportId = params.id;
+    const reportId = params.params.id;
 
     if (!reportId) {
       return NextResponse.json(
@@ -58,11 +58,11 @@ export async function GET(
 // PUT /api/reports/[id]
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
-) {
+  params: { params: { id: string } }
+): Promise<NextResponse<ResponseData>> {
   try {
     const { user } = await requireAuth();
-    const reportId = params.id;
+    const reportId = params.params.id;
     const body = await request.json();
 
     if (!reportId) {
@@ -139,11 +139,11 @@ export async function PUT(
 // DELETE /api/reports/[id]
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
-) {
+  params: { params: { id: string } }
+): Promise<NextResponse<ResponseData>> {
   try {
     const { user } = await requireAuth();
-    const reportId = params.id;
+    const reportId = params.params.id;
 
     if (!reportId) {
       return NextResponse.json(
