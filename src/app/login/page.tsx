@@ -149,7 +149,7 @@ function LoginForm() {
         </CardContent>
         <CardFooter className="flex justify-center">
           <p className="text-sm text-gray-600">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <a href="/register" className="text-primary hover:underline">
               Sign up
             </a>

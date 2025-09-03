@@ -40,6 +40,12 @@ const eslintConfig = [
       plugins: {
         "@typescript-eslint": tseslint.plugin,
         "react": (await import("eslint-plugin-react")).default,
+        "next": nextPlugin,
+      },
+      settings: {
+        react: {
+          version: "detect"
+        }
       },
       rules: {
         ...tseslint.configs.recommended.rules,
@@ -48,6 +54,7 @@ const eslintConfig = [
         "@typescript-eslint/no-unused-vars": isCI ? "off" : "warn",
         "@typescript-eslint/no-empty-object-type": "off",
         "@typescript-eslint/no-unsafe-argument": "off",
+        "react/prop-types": "off",
         "@typescript-eslint/no-unsafe-assignment": "off",
         "@typescript-eslint/no-unsafe-call": "off",
         "@typescript-eslint/no-unsafe-member-access": "off",
