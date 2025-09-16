@@ -122,10 +122,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(
+  req: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
     const { user } = await requireAuth();
-    const { id } = params;
+    const { id } = context.params;
     const body: Omit<ESGResponseUpdate, 'userId'> = await req.json();
 
     // Verify the response exists and belongs to the user

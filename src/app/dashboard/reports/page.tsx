@@ -96,12 +96,6 @@ export default function ReportsPage() {
     }
   }, [selectedYear, data]);
 
-  const years = useMemo(() => {
-    const unique = new Set<number>();
-    data.forEach(item => unique.add(item.financialYear));
-    return Array.from(unique).sort((a, b) => b - a);
-  }, [data]);
-
   // Prepare chart data with proper filtering and highlighting
   const chartData = useMemo(() => {
     // If "All Years" is selected, show all data with highlighting
