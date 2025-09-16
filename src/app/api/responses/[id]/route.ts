@@ -21,14 +21,13 @@ interface ESGResponseUpdate {
   updatedAt: Date;
 }
 
-// Updated type for destructured params
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { user } = await requireAuth();
-    const { id } = params;
+    const { id } = await params; // Must await params in Next.js 15
     const body: Omit<ESGResponseUpdate, 'userId'> = await request.json();
 
     // Verify the response exists and belongs to the user
@@ -71,11 +70,11 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { user } = await requireAuth();
-    const { id } = params;
+    const { id } = await params; // Must await params in Next.js 15
 
     // Verify the response exists and belongs to the user
     const existingResponse = await prisma.eSGResponse.findFirst({
