@@ -21,15 +21,10 @@ interface ESGResponseUpdate {
   updatedAt: Date;
 }
 
-type RouteParams = {
-  params: {
-    id: string;
-  };
-}
-
+// Updated type for destructured params
 export async function PUT(
   request: Request,
-  { params }: RouteParams
+  { params }: { params: { id: string } }
 ) {
   try {
     const { user } = await requireAuth();
@@ -76,7 +71,7 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: RouteParams
+  { params }: { params: { id: string } }
 ) {
   try {
     const { user } = await requireAuth();
