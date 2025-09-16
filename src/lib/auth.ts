@@ -24,15 +24,17 @@ export const authConfig: NextAuthConfig = {
       });
 
       if (existingUser) {
-        // If user exists, update their record with OAuth info
+        // Use Prisma's UserUpdateInput type for update data
+        const updateData: Parameters<typeof prisma.user.update>[0]['data'] = {
+          name: user.name || existingUser.name,
+          email: user.email,
+          image: user.image || existingUser.image,
+          ...(user.emailVerified && { emailVerified: user.emailVerified }),
+        };
+
         const updatedUser = await prisma.user.update({
           where: { id: existingUser.id },
-          data: {
-            name: user.name || existingUser.name,
-            email: user.email,
-            emailVerified: user.emailVerified || existingUser.emailVerified,
-            image: user.image || existingUser.image,
-          },
+          data: updateData,
         });
         
         // Ensure we return an object that matches AdapterUser
@@ -50,7 +52,7 @@ export const authConfig: NextAuthConfig = {
         data: {
           name: user.name || user.email.split('@')[0] || 'User',
           email: user.email,
-          emailVerified: user.emailVerified,
+          emailVerified: user.emailVerified || null,
           image: user.image,
           passwordHash: null, // OAuth users won't have a password
         },
