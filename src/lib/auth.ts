@@ -6,20 +6,8 @@ import { prisma } from "./prisma";
 import { compare } from "bcryptjs";
 
 // Create a custom adapter type that extends the default Adapter
-type CustomPrismaAdapter = ReturnType<typeof PrismaAdapter> & {
-  createUser: (user: {
-    name?: string | null;
-    email: string;
-    image?: string | null;
-    emailVerified?: Date | null;
-  }) => Promise<{
-    id: string;
-    name: string | null;
-    email: string;
-    emailVerified: Date | null;
-    image: string | null;
-    passwordHash: string | null;
-  }>;
+type CustomPrismaAdapter = Omit<ReturnType<typeof PrismaAdapter>, 'createUser'> & {
+  createUser: (user: Omit<AdapterUser, 'id'>) => Promise<AdapterUser>;
 };
 
 const adapter = PrismaAdapter(prisma) as CustomPrismaAdapter;
@@ -29,12 +17,7 @@ export const authConfig: NextAuthConfig = {
   adapter: {
     ...adapter,
     // Custom createUser implementation to handle OAuth users
-    async createUser(user: {
-      name?: string | null;
-      email: string;
-      image?: string | null;
-      emailVerified?: Date | null;
-    }) {
+    async createUser(user: Omit<AdapterUser, 'id'>) {
       // Check if user with this email already exists
       const existingUser = await prisma.user.findUnique({
         where: { email: user.email },
@@ -42,7 +25,7 @@ export const authConfig: NextAuthConfig = {
 
       if (existingUser) {
         // If user exists, update their record with OAuth info
-        return prisma.user.update({
+        const updatedUser = await prisma.user.update({
           where: { id: existingUser.id },
           data: {
             name: user.name || existingUser.name,
@@ -51,18 +34,36 @@ export const authConfig: NextAuthConfig = {
             image: user.image || existingUser.image,
           },
         });
+        
+        // Ensure we return an object that matches AdapterUser
+        return {
+          id: updatedUser.id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          emailVerified: updatedUser.emailVerified,
+          image: updatedUser.image,
+        } as AdapterUser;
       }
 
       // If user doesn't exist, create a new one
-      return prisma.user.create({
+      const newUser = await prisma.user.create({
         data: {
-          name: user.name || user.email.split('@')[0] || 'User', // Fallback to email prefix or 'User' if name is not provided
+          name: user.name || user.email.split('@')[0] || 'User',
           email: user.email,
           emailVerified: user.emailVerified,
           image: user.image,
           passwordHash: null, // OAuth users won't have a password
         },
       });
+
+      // Ensure we return an object that matches AdapterUser
+      return {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        emailVerified: newUser.emailVerified,
+        image: newUser.image,
+      } as AdapterUser;
     },
   },
   session: {
