@@ -2,11 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-utils";
 
-type ResponseData = {
-  data?: unknown;
-  error?: string;
-};
-
 interface ResponseWhereClause {
   userId: string;
   isDeleted: boolean;
