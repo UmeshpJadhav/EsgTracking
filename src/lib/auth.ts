@@ -5,9 +5,24 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import { compare } from "bcryptjs";
 
+// Create a custom adapter type that extends the default Adapter
+type CustomPrismaAdapter = ReturnType<typeof PrismaAdapter> & {
+  createUser: (user: {
+    name?: string | null;
+    email: string;
+    image?: string | null;
+    emailVerified?: Date | null;
+  }) => Promise<{
+    id: string;
+    name: string | null;
+    email: string;
+    emailVerified: Date | null;
+    image: string | null;
+    passwordHash: string | null;
+  }>;
+};
 
-// Create a custom adapter with proper typing
-const adapter = PrismaAdapter(prisma);
+const adapter = PrismaAdapter(prisma) as CustomPrismaAdapter;
 
 // Main auth configuration
 export const authConfig: NextAuthConfig = {
@@ -49,7 +64,7 @@ export const authConfig: NextAuthConfig = {
         },
       });
     },
-  } as any,
+  },
   session: {
     strategy: "jwt",
   },
@@ -71,7 +86,7 @@ export const authConfig: NextAuthConfig = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials?: Partial<Record<string, unknown>>, req?: Request) {
+      async authorize(credentials?: Partial<Record<string, unknown>>, _req?: Request) {
         try {
           // Type guard to ensure credentials exist and have required fields
           if (!credentials || 
@@ -123,7 +138,7 @@ export const authConfig: NextAuthConfig = {
     },
   ],
   callbacks: {
-    async signIn({ user, account, profile, email, credentials }) {
+    async signIn({ user: _user, account: _account, profile: _profile, email: _email, credentials: _credentials }) {
       // Allow OAuth and credentials sign in
       return true;
     },
@@ -131,6 +146,7 @@ export const authConfig: NextAuthConfig = {
      
       if (token && session.user) {
         session.user.id = token.sub as string;
+        
       }
       return session;
     },

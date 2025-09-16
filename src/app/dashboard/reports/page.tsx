@@ -8,16 +8,41 @@ import { Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { formatFinancialYear } from "@/lib/utils";
+
+// Add this type declaration near the top of the file, after the imports
+declare module 'jspdf' {
+  interface jsPDF {
+    lastAutoTable?: {
+      finalY?: number;
+    };
+  }
+}
 
 interface ReportData {
   id: string;
   financialYear: number;
-  carbonIntensity: number | null;        // T CO2e / INR
-  renewableRatio: number | null;         // stored as fraction (0..1)
-  diversityRatio: number | null;         // stored as fraction (0..1)
-  communitySpendRatio: number | null;    // stored as fraction (0..1)
-  // Add all other fields from the form
-  [key: string]: any;
+  carbonIntensity: number | null;
+  renewableRatio: number | null;
+  diversityRatio: number | null;
+  communitySpendRatio: number | null;
+  // Form fields
+  totalElectricity: number;
+  renewableElectricity: number;
+  totalFuel: number;
+  carbonEmissions: number;
+  totalEmployees: number;
+  femaleEmployees: number;
+  trainingHours: number;
+  communityInvestment: number;
+  independentBoard: number;
+  dataPrivacyPolicy: boolean | null;
+  totalRevenue: number;
+  // Timestamps
+  createdAt?: string;
+  updatedAt?: string;
+  // Allow for additional calculated or derived properties
+  [key: string]: string | number | boolean | null | undefined;
 }
 
 export default function ReportsPage() {
@@ -82,7 +107,7 @@ export default function ReportsPage() {
     // If "All Years" is selected, show all data with highlighting
     if (selectedYear === "all") {
       return data.map(d => ({
-        year: d.financialYear,
+        year: formatFinancialYear(d.financialYear),
         'Carbon Intensity': d.carbonIntensity ?? 0,
         'Community %': d.communitySpendRatio ? d.communitySpendRatio * 100 : 0,
         'Diversity %': d.diversityRatio ? d.diversityRatio * 100 : 0,
@@ -96,7 +121,7 @@ export default function ReportsPage() {
     if (!selectedData) return [];
     
     return [{
-      year: selectedData.financialYear,
+      year: formatFinancialYear(selectedData.financialYear),
       'Carbon Intensity': selectedData.carbonIntensity ?? 0,
       'Community %': selectedData.communitySpendRatio ? selectedData.communitySpendRatio * 100 : 0,
       'Diversity %': selectedData.diversityRatio ? selectedData.diversityRatio * 100 : 0,
@@ -133,7 +158,7 @@ export default function ReportsPage() {
       yPosition += 10;
 
       const tableData = exportData.map(d => [
-        d.financialYear,
+        formatFinancialYear(d.financialYear),
         d.carbonIntensity?.toFixed(6) ?? "N/A",
         d.renewableRatio ? (d.renewableRatio * 100).toFixed(2) + "%" : "N/A",
         d.diversityRatio ? (d.diversityRatio * 100).toFixed(2) + "%" : "N/A",
@@ -151,12 +176,11 @@ export default function ReportsPage() {
       // Add detailed report if a specific year is selected
       if (selectedYear !== "all" && exportData.length > 0) {
         const selectedData = exportData[0];
-        // @ts-ignore - lastAutoTable is added by jspdf-autotable
-        yPosition = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 15 : yPosition + 20;
+        yPosition = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 15 : yPosition + 20;
         
         // Add detailed report header
         doc.setFontSize(14);
-        doc.text(`Detailed Report - FY ${selectedYear}`, 14, yPosition);
+        doc.text(`Detailed Report - FY ${formatFinancialYear(Number(selectedYear))}`, 14, yPosition);
         yPosition += 10;
 
         // Add detailed metrics in two columns
@@ -203,7 +227,7 @@ export default function ReportsPage() {
         });
       }
 
-      doc.save(`esg-report-${selectedYear === "all" ? 'all-years' : `FY-${selectedYear}`}-${new Date().toISOString().slice(0, 10)}.pdf`);
+      doc.save(`esg-report-${selectedYear === "all" ? 'all-years' : `FY-${formatFinancialYear(Number(selectedYear))}`}-${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (e) {
       console.error(e);
     } finally {
@@ -220,7 +244,7 @@ export default function ReportsPage() {
       if (selectedYear === "all") {
         // For all years, just export the summary
         exportData = data.map(d => ({
-          'Financial Year': d.financialYear,
+          'Financial Year': formatFinancialYear(d.financialYear),
           'Carbon Intensity (T CO2e/INR)': d.carbonIntensity?.toFixed(6) ?? "N/A",
           'Renewable Energy %': d.renewableRatio ? (d.renewableRatio * 100).toFixed(2) : "N/A",
           'Diversity %': d.diversityRatio ? (d.diversityRatio * 100).toFixed(2) : "N/A",
@@ -232,7 +256,7 @@ export default function ReportsPage() {
         if (selectedData) {
           exportData = [{
             // Summary
-            'Financial Year': selectedData.financialYear,
+            'Financial Year': formatFinancialYear(selectedData.financialYear),
             'Carbon Intensity (T CO2e/INR)': selectedData.carbonIntensity?.toFixed(6) ?? "N/A",
             'Renewable Energy %': selectedData.renewableRatio ? (selectedData.renewableRatio * 100).toFixed(2) : "N/A",
             'Diversity %': selectedData.diversityRatio ? (selectedData.diversityRatio * 100).toFixed(2) : "N/A",
@@ -261,7 +285,7 @@ export default function ReportsPage() {
       XLSX.utils.book_append_sheet(workbook, worksheet, "ESG Report"); 
       
       // Save the file
-      XLSX.writeFile(workbook, `esg-report-${selectedYear === "all" ? 'all-years' : `FY-${selectedYear}`}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      XLSX.writeFile(workbook, `esg-report-${selectedYear === "all" ? 'all-years' : `FY-${formatFinancialYear(Number(selectedYear))}`}-${new Date().toISOString().slice(0, 10)}.xlsx`);
     } catch (e) {
       console.error(e);
     } finally {
@@ -285,7 +309,7 @@ export default function ReportsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-semibold">
-            {selectedYear === "all" ? "ESG Performance Dashboard" : `ESG Report - FY ${selectedYear}`}
+            {selectedYear === "all" ? "ESG Performance Dashboard" : `ESG Report - FY ${formatFinancialYear(Number(selectedYear))}`}
           </h1>
           <p className="text-sm text-muted-foreground">
             {selectedYear === "all" 
@@ -302,9 +326,13 @@ export default function ReportsPage() {
             className="p-2 border rounded text-sm w-full sm:w-auto"
           >
             <option value="all">All Years</option>
-            {years.map(year => (
-              <option key={year} value={year}>{year}</option>
-            ))}
+            {Array.from(new Set(data.map((item) => item.financialYear)))
+              .sort((a, b) => b - a)
+              .map((year) => (
+                <option key={year} value={year}>
+                  {formatFinancialYear(year)}
+                </option>
+              ))}
           </select>
           
           <Button
@@ -408,7 +436,7 @@ export default function ReportsPage() {
                 />
 
                 <Tooltip
-                  formatter={(value: any, name: string) =>
+                  formatter={(value: number | string, name: string) =>
                     name === "Carbon Intensity"
                       ? [Number(value).toFixed(6), name]
                       : [`${Number(value).toFixed(1)}%`, name]
@@ -454,7 +482,7 @@ export default function ReportsPage() {
       {/* Detailed View Section - Only shown when a year is selected */}
       {selectedYear !== "all" && selectedResponse && (
         <div className="space-y-6">
-          <h2 className="text-xl font-semibold">Detailed Report - FY {selectedYear}</h2>
+          <h2 className="text-xl font-semibold">Detailed Report - FY {formatFinancialYear(Number(selectedYear))}</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Environmental Metrics Card */}

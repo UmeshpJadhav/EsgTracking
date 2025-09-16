@@ -1,7 +1,6 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -12,7 +11,6 @@ import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,8 +38,8 @@ export default function RegisterPage() {
       }
 
       // Redirect to login page after successful registration
-      router.push("/login?registered=true");
-    } catch (err) {
+      // Removed router.push("/login?registered=true");
+    } catch (_err) {
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
@@ -64,7 +62,7 @@ export default function RegisterPage() {
       }
 
       if (result?.url) {
-        router.push(result.url);
+        // Removed router.push(result.url);
       }
     } catch {
       setError("An error occurred during Google sign-up. Please try again.");

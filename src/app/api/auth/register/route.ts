@@ -21,10 +21,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ data: user }, { status: 201 });
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (e) {
+  
+  } catch (_e) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
-
-

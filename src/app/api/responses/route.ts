@@ -1,12 +1,56 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-utils";
 
 type ResponseData = {
-  data?: any;
+  data?: unknown;
   error?: string;
 };
+
+interface ResponseWhereClause {
+  userId: string;
+  isDeleted: boolean;
+  financialYear?: number;
+}
+
+interface ESGResponseCreate {
+  userId: string;
+  financialYear: number;
+  totalElectricity: number;
+  renewableElectricity: number;
+  totalFuel: number;
+  carbonEmissions: number;
+  totalEmployees: number;
+  femaleEmployees: number;
+  trainingHours: number;
+  communityInvestment: number;
+  independentBoard: number;
+  dataPrivacyPolicy: boolean;
+  totalRevenue: number;
+  carbonIntensity: number;
+  renewableRatio: number;
+  diversityRatio: number;
+  communitySpendRatio: number;
+}
+
+interface ESGResponseUpdate {
+  totalElectricity: number;
+  renewableElectricity: number;
+  totalFuel: number;
+  carbonEmissions: number;
+  totalEmployees: number;
+  femaleEmployees: number;
+  trainingHours: number;
+  communityInvestment: number;
+  independentBoard: number;
+  dataPrivacyPolicy: boolean;
+  totalRevenue: number;
+  carbonIntensity: number;
+  renewableRatio: number;
+  diversityRatio: number;
+  communitySpendRatio: number;
+  updatedAt: Date;
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,26 +58,28 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const year = searchParams.get('year');
 
-    const whereClause: any = { 
-      userId: user.id, 
-      isDeleted: false 
+    const where: ResponseWhereClause = {
+      userId: user.id,
+      isDeleted: false,
     };
 
     if (year) {
-      whereClause.financialYear = parseInt(year, 10);
+      where.financialYear = parseInt(year, 10);
     }
 
     const responses = await prisma.eSGResponse.findMany({
-      where: whereClause,
-      orderBy: { financialYear: "desc" },
+      where,
+      orderBy: {
+        financialYear: 'desc',
+      },
     });
 
-    return NextResponse.json<ResponseData>({ data: responses });
+    return NextResponse.json({ data: responses });
   } catch (error) {
     console.error('Error fetching responses:', error);
-    return NextResponse.json<ResponseData>(
+    return NextResponse.json(
       { error: 'Failed to fetch responses' },
-      { status: error instanceof Error ? 401 : 500 }
+      { status: 500 }
     );
   }
 }
@@ -41,88 +87,81 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const { user } = await requireAuth();
-    const body = await req.json();
+    const body: Omit<ESGResponseCreate, 'userId'> = await req.json();
 
-    // Input validation
-    const requiredFields = ['financialYear'];
-    const missingFields = requiredFields.filter(field => !(field in body));
-    
-    if (missingFields.length > 0) {
-      return NextResponse.json<ResponseData>(
-        { error: `Missing required fields: ${missingFields.join(', ')}` },
+    // Check if response already exists for this year
+    const existingResponse = await prisma.eSGResponse.findFirst({
+      where: {
+        userId: user.id,
+        financialYear: body.financialYear,
+        isDeleted: false,
+      },
+    });
+
+    if (existingResponse) {
+      return NextResponse.json(
+        { error: 'Response already exists for this year' },
         { status: 400 }
       );
     }
 
-    // Calculate metrics
-    const { 
-      financialYear,
-      totalElectricity = 0,
-      renewableElectricity = 0,
-      totalFuel = 0,
-      carbonEmissions = 0,
-      totalEmployees = 0,
-      femaleEmployees = 0,
-      trainingHours = 0,
-      communityInvestment = 0,
-      independentBoard = 0,
-      dataPrivacyPolicy = false,
-      totalRevenue = 0,
-    } = body;
-
-    // Create or update the response
-    const response = await prisma.eSGResponse.upsert({
-      where: {
-        user_financial_year: {
-          userId: user.id,
-          financialYear,
-        },
-      },
-      create: {
+    const response = await prisma.eSGResponse.create({
+      data: {
+        ...body,
         userId: user.id,
-        financialYear,
-        totalElectricity,
-        renewableElectricity,
-        totalFuel,
-        carbonEmissions,
-        totalEmployees,
-        femaleEmployees,
-        trainingHours,
-        communityInvestment,
-        independentBoard,
-        dataPrivacyPolicy,
-        totalRevenue,
-        carbonIntensity: totalRevenue ? carbonEmissions / totalRevenue : 0,
-        renewableRatio: totalElectricity ? renewableElectricity / totalElectricity : 0,
-        diversityRatio: totalEmployees ? femaleEmployees / totalEmployees : 0,
-        communitySpendRatio: totalRevenue ? communityInvestment / totalRevenue : 0,
-      },
-      update: {
-        totalElectricity,
-        renewableElectricity,
-        totalFuel,
-        carbonEmissions,
-        totalEmployees,
-        femaleEmployees,
-        trainingHours,
-        communityInvestment,
-        independentBoard,
-        dataPrivacyPolicy,
-        totalRevenue,
-        carbonIntensity: totalRevenue ? carbonEmissions / totalRevenue : 0,
-        renewableRatio: totalElectricity ? renewableElectricity / totalElectricity : 0,
-        diversityRatio: totalEmployees ? femaleEmployees / totalEmployees : 0,
-        communitySpendRatio: totalRevenue ? communityInvestment / totalRevenue : 0,
-        updatedAt: new Date(),
       },
     });
 
-    return NextResponse.json<ResponseData>({ data: response }, { status: 201 });
+    return NextResponse.json({ data: response }, { status: 201 });
   } catch (error) {
-    console.error('Error saving response:', error);
-    return NextResponse.json<ResponseData>(
-      { error: 'Failed to save response' },
-      { status: error instanceof Error ? 401 : 500 }
+    console.error('Error creating response:', error);
+    return NextResponse.json(
+      { error: 'Failed to create response' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const { user } = await requireAuth();
+    const { id } = params;
+    const body: Omit<ESGResponseUpdate, 'userId'> = await req.json();
+
+    // Verify the response exists and belongs to the user
+    const existingResponse = await prisma.eSGResponse.findFirst({
+      where: {
+        id,
+        userId: user.id,
+        isDeleted: false,
+      },
+    });
+
+    if (!existingResponse) {
+      return NextResponse.json(
+        { error: 'Response not found or unauthorized' },
+        { status: 404 }
+      );
+    }
+
+    const updatedResponse = await prisma.eSGResponse.update({
+      where: { id },
+      data: {
+        ...body,
+        // Don't allow updating these fields
+        id: undefined,
+        userId: undefined,
+        financialYear: undefined,
+        createdAt: undefined,
+      },
+    });
+
+    return NextResponse.json({ data: updatedResponse });
+  } catch (error) {
+    console.error('Error updating response:', error);
+    return NextResponse.json(
+      { error: 'Failed to update response' },
+      { status: 500 }
     );
   }
 }
@@ -134,7 +173,7 @@ export async function DELETE(req: NextRequest) {
     const responseId = searchParams.get('id');
 
     if (!responseId) {
-      return NextResponse.json<ResponseData>(
+      return NextResponse.json(
         { error: 'Response ID is required' },
         { status: 400 }
       );
@@ -152,18 +191,18 @@ export async function DELETE(req: NextRequest) {
     });
 
     if (response.count === 0) {
-      return NextResponse.json<ResponseData>(
+      return NextResponse.json(
         { error: 'Response not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json<ResponseData>({ data: { success: true } });
+    return NextResponse.json({ data: { success: true } });
   } catch (error) {
     console.error('Error deleting response:', error);
-    return NextResponse.json<ResponseData>(
+    return NextResponse.json(
       { error: 'Failed to delete response' },
-      { status: error instanceof Error ? 401 : 500 }
+      { status: 500 }
     );
   }
 }

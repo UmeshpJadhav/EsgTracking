@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
 
-// GET /api/responses - Get all ESG responses for the authenticated user
-export async function GET(request: NextRequest): Promise<NextResponse> {
+
+export async function GET(_request: NextRequest): Promise<NextResponse> {
   try {
     const { user } = await requireAuth();
 

@@ -19,7 +19,6 @@ model User {
   name          String       @db.VarChar(255)
   email         String       @unique @db.VarChar(255)
   passwordHash  String?      @db.VarChar(255)
-  emailVerified DateTime?
   image         String?
   isActive      Boolean      @default(true)
   createdAt     DateTime     @default(now())

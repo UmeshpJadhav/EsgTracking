@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { Metadata } from "next";
 import { requireAuth } from "@/lib/auth-utils";
+import { formatFinancialYear } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Home - ESG Tracker",
@@ -86,7 +86,7 @@ export default async function HomePage() {
                         {responses.map((response) => (
                           <tr key={response.id}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {response.financialYear}
+                              {formatFinancialYear(response.financialYear)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {response.carbonIntensity?.toFixed(6) ?? 'N/A'} T CO2e/INR

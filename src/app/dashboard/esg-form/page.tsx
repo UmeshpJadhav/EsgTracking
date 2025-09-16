@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 
 const RequiredField = () => <span className="text-red-500 ml-1">*</span>;
 
-// Prevent scroll/arrow changing number inputs
 const preventWheelChange = (e: React.WheelEvent<HTMLInputElement>) => {
   e.currentTarget.blur();
 };
@@ -25,6 +24,7 @@ const numberGuardProps = {
 };
 
 interface FormData {
+  id?: number;
   financialYear: number;
   totalElectricity: string;
   renewableElectricity: string;
@@ -38,6 +38,11 @@ interface FormData {
   dataPrivacyPolicy: boolean | null;
   totalRevenue: string;
 }
+
+// Helper function to format financial year
+const formatFinancialYear = (year: number) => {
+  return `${year}-${(year + 1).toString().slice(-2)}`;
+};
 
 export default function ESGFormPage() {
   const router = useRouter();
@@ -59,8 +64,8 @@ export default function ESGFormPage() {
     dataPrivacyPolicy: null,
     totalRevenue: "",
   });
-
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -71,6 +76,153 @@ export default function ESGFormPage() {
     diversityRatio: 0, // fraction 0..1
     communitySpendRatio: 0, // fraction 0..1
   });
+
+  // Reset form for new report
+  const resetForm = (year: number) => {
+    setFormData({
+      financialYear: year,
+      totalElectricity: "",
+      renewableElectricity: "",
+      totalFuel: "",
+      carbonEmissions: "",
+      totalEmployees: "",
+      femaleEmployees: "",
+      trainingHours: "",
+      communityInvestment: "",
+      independentBoard: "",
+      dataPrivacyPolicy: null,
+      totalRevenue: "",
+    });
+    setError("");
+    setSuccess("");
+  };
+
+  // Fetch existing data when year changes
+  useEffect(() => {
+    const fetchExistingData = async () => {
+      if (!currentYear) return;
+      
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/responses?year=${currentYear}`);
+        
+        if (response.ok) {
+          const { data } = await response.json();
+          
+          if (data && data.length > 0) {
+            // Get the first (and should be only) report for this year
+            const report = data[0];
+            // Existing report found - populate form
+            setFormData({
+              id: report.id,
+              financialYear: report.financialYear,
+              totalElectricity: report.totalElectricity?.toString() || "",
+              renewableElectricity: report.renewableElectricity?.toString() || "",
+              totalFuel: report.totalFuel?.toString() || "",
+              carbonEmissions: report.carbonEmissions?.toString() || "",
+              totalEmployees: report.totalEmployees?.toString() || "",
+              femaleEmployees: report.femaleEmployees?.toString() || "",
+              trainingHours: report.trainingHours?.toString() || "",
+              communityInvestment: report.communityInvestment?.toString() || "",
+              independentBoard: report.independentBoard?.toString() || "",
+              dataPrivacyPolicy: report.dataPrivacyPolicy,
+              totalRevenue: report.totalRevenue?.toString() || "",
+            });
+            setSuccess(`Editing report for FY ${formatFinancialYear(currentYear)}`);
+          } else {
+            // No report exists for this year - reset form
+            resetForm(currentYear);
+            setSuccess(`Creating new report for FY ${formatFinancialYear(currentYear)}`);
+          }
+        } else {
+          // If no report exists, reset the form for the current year
+          resetForm(currentYear);
+          setSuccess(`Creating new report for FY ${formatFinancialYear(currentYear)}`);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        setError('Failed to load report data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchExistingData();
+  }, [currentYear]);
+
+  // Handle year change
+  const handleYearChange = (year: number) => {
+    router.push(`/dashboard/esg-form?year=${year}`);
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Basic validation
+    const requiredFields = [
+      'totalElectricity', 'renewableElectricity', 'totalFuel', 'carbonEmissions',
+      'totalEmployees', 'femaleEmployees', 'trainingHours', 'communityInvestment',
+      'independentBoard', 'totalRevenue'
+    ];
+    
+    const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
+    if (missingFields.length > 0) {
+      setError(`Please fill in all required fields`);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const method = formData.id ? 'PUT' : 'POST';
+      const url = formData.id ? `/api/responses/${formData.id}` : '/api/responses';
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          financialYear: currentYear,
+          totalElectricity: parseFloat(formData.totalElectricity) || 0,
+          renewableElectricity: parseFloat(formData.renewableElectricity) || 0,
+          totalFuel: parseFloat(formData.totalFuel) || 0,
+          carbonEmissions: parseFloat(formData.carbonEmissions) || 0,
+          totalEmployees: parseInt(formData.totalEmployees, 10) || 0,
+          femaleEmployees: parseInt(formData.femaleEmployees, 10) || 0,
+          trainingHours: parseFloat(formData.trainingHours) || 0,
+          communityInvestment: parseFloat(formData.communityInvestment) || 0,
+          independentBoard: parseFloat(formData.independentBoard) || 0,
+          dataPrivacyPolicy: formData.dataPrivacyPolicy,
+          totalRevenue: parseFloat(formData.totalRevenue) || 0,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save report');
+      }
+
+      setSuccess(`Report ${formData.id ? 'updated' : 'created'} successfully!`);
+      setTimeout(() => router.push('/dashboard/reports'), 1500);
+    } catch (error) {
+      console.error('Error saving report:', error);
+      setError(error instanceof Error ? error.message : 'Failed to save report');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleInputChange = (field: keyof FormData, value: string | number | boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: typeof prev[field] === 'number' ? Number(value) : value
+    }));
+    setError("");
+    setSuccess("");
+  };
 
   // Recalculate on any input change
   useEffect(() => {
@@ -90,161 +242,73 @@ export default function ESGFormPage() {
     });
   }, [formData]);
 
-  const handleInputChange = (field: keyof FormData, value: string | number | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value as any }));
-    setError("");
-    setSuccess("");
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      // Required fields validation
-      const requiredFields = [
-        { field: "totalElectricity", label: "Total Electricity Consumption" },
-        { field: "renewableElectricity", label: "Renewable Electricity Consumption" },
-        { field: "totalFuel", label: "Total Fuel Consumption" },
-        { field: "carbonEmissions", label: "Carbon Emissions" },
-        { field: "totalEmployees", label: "Total Number of Employees" },
-        { field: "femaleEmployees", label: "Number of Female Employees" },
-        { field: "trainingHours", label: "Average Training Hours" },
-        { field: "communityInvestment", label: "Community Investment" },
-        { field: "independentBoard", label: "% of Independent Board Members" },
-        { field: "totalRevenue", label: "Total Revenue" },
-      ] as const;
-
-      const emptyFields = requiredFields.filter(({ field }) => !formData[field as keyof FormData]);
-      if (emptyFields.length > 0) {
-        const fieldLabels = emptyFields.map((f) => `"${f.label}"`).join(", ");
-        const message =
-          emptyFields.length === 1
-            ? `Please fill in the required field: ${fieldLabels}`
-            : `Please fill in all required fields: ${fieldLabels}`;
-        throw new Error(message);
-      }
-
-      // Numeric sanity checks
-      if (parseFloat(formData.renewableElectricity) > parseFloat(formData.totalElectricity)) {
-        throw new Error("Renewable electricity cannot exceed total electricity consumption");
-      }
-      if (parseInt(formData.femaleEmployees) > parseInt(formData.totalEmployees)) {
-        throw new Error("Female employees cannot exceed total employees");
-      }
-      if (formData.dataPrivacyPolicy === null) {
-        throw new Error("Please select whether the company has a data privacy policy");
-      }
-      const independentBoardVal = parseFloat(formData.independentBoard);
-      if (independentBoardVal < 0 || independentBoardVal > 100) {
-        throw new Error("% of independent board members must be between 0 and 100");
-      }
-
-      // Build payload (ratios stay as fractions 0..1)
-      const payload = {
-        financialYear: formData.financialYear,
-        totalElectricity: formData.totalElectricity ? parseFloat(formData.totalElectricity) : 0,
-        renewableElectricity: formData.renewableElectricity ? parseFloat(formData.renewableElectricity) : 0,
-        totalFuel: formData.totalFuel ? parseFloat(formData.totalFuel) : 0,
-        carbonEmissions: formData.carbonEmissions ? parseFloat(formData.carbonEmissions) : 0,
-        totalEmployees: formData.totalEmployees ? parseInt(formData.totalEmployees) : 0,
-        femaleEmployees: formData.femaleEmployees ? parseInt(formData.femaleEmployees) : 0,
-        trainingHours: formData.trainingHours ? parseFloat(formData.trainingHours) : 0,
-        communityInvestment: formData.communityInvestment ? parseFloat(formData.communityInvestment) : 0,
-        independentBoard: independentBoardVal,
-        dataPrivacyPolicy: formData.dataPrivacyPolicy,
-        totalRevenue: formData.totalRevenue ? parseFloat(formData.totalRevenue) : 0,
-        carbonIntensity: calculations.carbonIntensity,
-        renewableRatio: calculations.renewableRatio,
-        diversityRatio: calculations.diversityRatio,
-        communitySpendRatio: calculations.communitySpendRatio,
-      };
-
-      const response = await fetch("/api/responses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to save response");
-      }
-
-      setSuccess("ESG response saved successfully!");
-      setTimeout(() => router.push("/dashboard/reports"), 1500);
-
-      // Reset after save
-      setFormData({
-        financialYear: currentYear,
-        totalElectricity: "",
-        renewableElectricity: "",
-        totalFuel: "",
-        carbonEmissions: "",
-        totalEmployees: "",
-        femaleEmployees: "",
-        trainingHours: "",
-        communityInvestment: "",
-        independentBoard: "",
-        dataPrivacyPolicy: null,
-        totalRevenue: "",
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save response");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50/50">
+    <div className="min-h-screen bg-gray-50/90">
       <div className="container mx-auto px-4 py-8 max-w-5xl">
-        <div className="mb-6">
-          <h1 className="text-4xl font-bold text-teal-600 mb-3">ESG Questionnaire</h1>
-          <p className="text-gray-600 text-lg">
-            Complete your Environmental, Social, and Governance metrics for the selected financial year.
-          </p>
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {formData.id ? 'Edit ESG Report' : 'New ESG Report'}
+            </h1>
+            <p className="text-muted-foreground">
+              Financial Year: {formatFinancialYear(currentYear)}
+              {formData.id ? ' • Click save to update your report' : ' • Fill in the details below to create a new report'}
+            </p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <Select
+              value={currentYear.toString()}
+              onValueChange={(value) => handleYearChange(parseInt(value, 10))}
+              disabled={isSubmitting}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select year" />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 5 }, (_, i) => {
+                  const year = new Date().getFullYear() - i;
+                  return (
+                    <SelectItem key={year} value={year.toString()}>
+                      {formatFinancialYear(year)}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          {success && (
-            <Alert className="border-green-200 bg-green-50 text-green-800">
-              <AlertDescription>{success}</AlertDescription>
-            </Alert>
-          )}
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
+        {success && (
+          <Alert className="mb-6">
+            <AlertDescription>{success}</AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Reporting Period */}
           <Card className="shadow-sm">
             <CardHeader className="pb-4">
-              <CardTitle className="text-xl">Reporting Period</CardTitle>
-              <CardDescription>Select the financial year for this ESG report</CardDescription>
+              <CardTitle className="text-lg">Reporting Period</CardTitle>
+              <CardDescription>
+                Select the financial year for this ESG report
+              </CardDescription>
             </CardHeader>
-            <CardContent className="pt-0">
-              <div className="max-w-xs">
-                <Label htmlFor="financialYear" className="text-sm font-medium">
-                  Financial Year
-                </Label>
-                <Select
-                  value={formData.financialYear.toString()}
-                  onValueChange={(value) => handleInputChange("financialYear", parseInt(value))}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 10 }, (_, i) => currentYear - i).map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="financialYear" className="flex items-center">
+                    Financial Year <RequiredField />
+                  </Label>
+                  <div className="text-lg font-medium p-2 bg-gray-50 rounded-md border">
+                    {formatFinancialYear(currentYear)}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -490,7 +554,9 @@ export default function ESGFormPage() {
                     Does the company have a data privacy policy?
                   </Label>
                   <Select
-                    value={formData.dataPrivacyPolicy === null ? "" : formData.dataPrivacyPolicy.toString()}
+                    value={formData.dataPrivacyPolicy === null || formData.dataPrivacyPolicy === undefined 
+                      ? "" 
+                      : formData.dataPrivacyPolicy.toString()}
                     onValueChange={(value) => handleInputChange("dataPrivacyPolicy", value === "true")}
                   >
                     <SelectTrigger>
@@ -587,8 +653,8 @@ export default function ESGFormPage() {
           </Card>
 
           <div className="flex justify-end">
-            <Button type="submit" size="lg" disabled={loading}>
-              {loading ? "Saving..." : "Save ESG Response"}
+            <Button type="submit" size="lg" disabled={isLoading || isSubmitting}>
+              {isLoading ? "Loading..." : isSubmitting ? "Saving..." : "Save ESG Response"}
             </Button>
           </div>
         </form>
